@@ -70,6 +70,8 @@ bool IsConv3DBackpropInputV2(const NodeDef& node);
 bool IsDepthwiseConv2dNative(const NodeDef& node);
 bool IsDepthwiseConv2dNativeBackpropFilter(const NodeDef& node);
 bool IsDepthwiseConv2dNativeBackpropInput(const NodeDef& node);
+bool IsVitisAIConv2D(const NodeDef& node);
+bool IsVitisAIDepthwiseConv2D(const NodeDef& node);
 bool IsDequeueOp(const NodeDef& node);
 bool IsDiv(const NodeDef& node);
 bool IsDivNoNan(const NodeDef& node);

@@ -17,6 +17,10 @@ load("//tensorflow:pytype.default.bzl", "pytype_library", "pytype_strict_library
 load("//tensorflow/python/tpu:tpu.bzl", "tpu_py_test")
 load("//tensorflow/core/platform:build_config.bzl", "pyx_library", "tf_additional_all_protos", "tf_additional_lib_deps", "tf_proto_library", "tf_protos_grappler")  # @unused
 load("//tensorflow/core/platform:build_config_root.bzl", "if_static", "tf_additional_xla_deps_py")
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "zendnn_deps",
+)
 
 visibility = [
     "//tensorflow:__subpackages__",
@@ -192,7 +196,7 @@ tf_cc_binary(
     name = "offset_counter",
     srcs = ["offset_counter.cc"],
     visibility = ["//visibility:public"],
-    deps = [
+    deps = zendnn_deps() + [
         ":offset_counter_helper",
         ":op_reg_offset_proto_cc",
         "//tensorflow/tsl/platform:errors",
@@ -209,7 +213,7 @@ cc_library(
     srcs = ["offset_counter_helper.cc"],
     hdrs = ["offset_counter_helper.h"],
     visibility = ["//visibility:public"],
-    deps = [
+    deps = zendnn_deps() + [
         ":op_reg_offset_proto_cc",
         "//tensorflow/tsl/platform:errors",
         "//tensorflow/tsl/platform:regexp",
@@ -223,7 +227,7 @@ cc_library(
 tf_cc_test(
     name = "offset_counter_helper_test",
     srcs = ["offset_counter_helper_test.cc"],
-    deps = [
+    deps = zendnn_deps() + [
         ":offset_counter_helper",
         ":op_reg_offset_proto_cc",
         "//tensorflow/core:lib",

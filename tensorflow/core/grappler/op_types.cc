@@ -210,6 +210,14 @@ bool IsDepthwiseConv2dNativeBackpropInput(const NodeDef& node) {
   return node.op() == "DepthwiseConv2dNativeBackpropInput";
 }
 
+bool IsVitisAIConv2D(const NodeDef& node) {
+  return node.op() == "VitisAIConv2D";
+}
+
+bool IsVitisAIDepthwiseConv2D(const NodeDef& node) {
+  return node.op() == "VitisAIDepthwiseConv2D";
+}
+
 bool IsDequeueOp(const NodeDef& node) {
   const auto& op = node.op();
   return op == "QueueDequeueManyV2" || op == "QueueDequeueMany" ||

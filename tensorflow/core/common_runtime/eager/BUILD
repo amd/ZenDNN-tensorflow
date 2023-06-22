@@ -2,16 +2,21 @@ load("//tensorflow:tensorflow.default.bzl", "filegroup")
 load("//tensorflow/core/platform:rules_cc.bzl", "cc_library")
 load(
     "//tensorflow:tensorflow.bzl",
-    "if_zendnn",
     "tf_cc_test",
     "tf_cc_test_mkl",
     "tf_copts",
     "tf_cuda_library",
     "tf_mkl_kernel_library",
+    "tf_zendnn_kernel_library",
 )
 load(
     "//third_party/mkl:build_defs.bzl",
     "if_mkl",
+)
+
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "if_zendnn",
 )
 
 package(
@@ -602,17 +607,15 @@ tf_cc_test(
     ],
 )
 
-cc_library(
+tf_zendnn_kernel_library(
     name = "zen_eager_op_rewrite",
     srcs = ["zen_eager_op_rewrite.cc"],
-    copts = tf_copts(),
     deps = [
         ":eager_op_rewrite_registry",
         "//tensorflow/core:all_kernels",
         "//tensorflow/core:framework",
         "//tensorflow/core:graph",
         "//tensorflow/core:lib",
-        "//tensorflow/core/graph:zen_graph_util",
     ],
     alwayslink = 1,
 )

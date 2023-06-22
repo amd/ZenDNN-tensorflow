@@ -178,6 +178,39 @@ def _tf_repositories():
     )
 
     tf_http_archive(
+        name = "amd_libm",
+        build_file = "//third_party/amd_libm:libm.BUILD",
+        sha256 = "906391b8e35d95ff37f7bda7bbef3864609b58213e52aacf687a91bebcd617c0",
+        strip_prefix = "aocl-libm-ose-aocl-3.1",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip",
+            "https://github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip",
+        ],
+    )
+
+    tf_http_archive(
+        name = "amd_blis",
+        build_file = "//third_party/amd_blis:blis.BUILD",
+        sha256 = "cddd31176834a932753ac0fc4c76332868feab3e9ac607fa197d8b44c1e74a41",
+        strip_prefix = "blis-4.0",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/blis/archive/refs/tags/4.0.tar.gz",
+            "https://github.com/amd/blis/archive/refs/tags/4.0.tar.gz",
+        ],
+    )
+
+    tf_http_archive(
+        name = "zen_dnn",
+        build_file = "//third_party/zen_dnn:zendnn.BUILD",
+        sha256 = "006024118968a9d8f3de4647f3cb25c6bd5879563ebf9672afe2efd1ae4bc458",
+        strip_prefix = "ZenDNN-4.0",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz",
+            "https://github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz",
+        ],
+    )
+
+    tf_http_archive(
         name = "mkl_dnn",
         build_file = "//third_party/mkl_dnn:mkldnn.BUILD",
         sha256 = "a0211aeb5e7dad50b97fa5dffc1a2fe2fe732572d4164e1ee8750a2ede43fbec",
@@ -188,9 +221,9 @@ def _tf_repositories():
     tf_http_archive(
         name = "mkl_dnn_v1",
         build_file = "//third_party/mkl_dnn:mkldnn_v1.BUILD",
-        sha256 = "a50993aa6265b799b040fe745e0010502f9f7103cc53a9525d59646aef006633",
-        strip_prefix = "oneDNN-2.7.3",
-        urls = tf_mirror_urls("https://github.com/oneapi-src/oneDNN/archive/refs/tags/v2.7.3.tar.gz"),
+        sha256 = "fd47d2470000b5015f6e34134f799683050f81cbc04f53a3b0d323df1bb900bc",
+        strip_prefix = "oneDNN-2.6.3",
+        urls = tf_mirror_urls("https://github.com/oneapi-src/oneDNN/archive/refs/tags/v2.6.3.tar.gz"),
     )
 
     tf_http_archive(

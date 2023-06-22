@@ -560,6 +560,187 @@ class AutoMixedPrecisionListsMkl : public AutoMixedPrecisionLists {
     return list;
   }
 };
+class AutoMixedPrecisionListsZen : public AutoMixedPrecisionLists {
+ public:
+  AutoMixedPrecisionListsZen() {}
+
+  // Only ops which are supported by ZEN in bfloat16 should be added to the
+  // allow list, infer list, or clear list.
+  gtl::FlatSet<string> AllowList() override {
+    auto list = gtl::FlatSet<string>{"Conv2D", "DepthwiseConv2dNative"};
+    // Updatelist is port from OneDNN
+    UpdateList("ALLOWLIST", &list);
+    // ToDo : understand need for Whitelist in subsequent patch
+    UpdateList("WHITELIST", &list);
+    return list;
+  }
+
+  gtl::FlatSet<string> InferList() override {
+    auto list = gtl::FlatSet<string>{"Add",
+                                     "AddN",
+                                     "AddV2",
+                                     "AvgPool",
+                                     "AvgPool3D",
+                                     "AvgPool3DGrad",
+                                     "AvgPoolGrad",
+                                     "BiasAdd",
+                                     "BiasAddGrad",
+                                     "BiasAddV1",
+                                     "FusedBatchNormV2",
+                                     "FusedBatchNormGradV2",
+                                     "FusedBatchNormV3",
+                                     "FusedBatchNormGradV3",
+                                     "LeakyRelu",
+                                     "LeakyReluGrad",
+                                     "Mul",
+                                     "Sub",
+                                     "Elu",
+                                     "EluGrad",
+                                     "FloorDiv",
+                                     "_FusedBatchNormEx",
+                                     "Log",
+                                     "Log1p",
+                                     "LogSoftmax",
+                                     "Prod",
+                                     "RealDiv",
+                                     "Reciprocal",
+                                     "Selu",
+                                     "SeluGrad",
+                                     "Sigmoid",
+                                     "SigmoidGrad",
+                                     "Softmax",
+                                     "Softplus",
+                                     "SoftplusGrad",
+                                     "Softsign",
+                                     "SoftsignGrad",
+                                     "Sqrt",
+                                     "Tanh",
+                                     "TanhGrad"};
+    UpdateList("INFERLIST", &list);
+    // For backwards compatibility, keeping the original env variable here.
+    // TODO(reedwm): This should be removed if we don't have active users.
+    UpdateList("GRAYLIST", &list);
+    return list;
+  }
+
+  gtl::FlatSet<string> DenyList() override {
+    auto list = gtl::FlatSet<string>{
+        "Exp",
+        "Expm1",
+        "L2Loss",
+        "Mean",
+        "Pow",
+        "SaveV2",
+        "SoftmaxCrossEntropyWithLogits",
+        "SparseSoftmaxCrossEntropyWithLogits",
+        "Sum",
+    };
+    UpdateList("DENYLIST", &list);
+    // For backwards compatibility, keeping the original env variable here.
+    // TODO(reedwm): This should be removed if we don't have active users.
+    UpdateList("BLACKLIST", &list);
+    return list;
+  }
+
+  gtl::FlatSet<string> ClearList() override {
+    auto list = gtl::FlatSet<string>{
+        "Abs",
+        "ArgMax",
+        "ArgMin",
+        "BatchToSpace",
+        "BatchToSpaceND",
+        "BroadcastTo",
+        "Ceil",
+        "CheckNumerics",
+        "ClipByValue",
+        "Concat",
+        "ConcatV2",
+        "DepthToSpace",
+        "DynamicPartition",
+        "DynamicStitch",
+        "EnsureShape",
+        "Enter",
+        "Equal",
+        "Exit",
+        "ExpandDims",
+        "Fill",
+        "Floor",
+        "Gather",
+        "GatherNd",
+        "GatherV2",
+        "Greater",
+        "GreaterEqual",
+        "Identity",
+        "IsFinite",
+        "IsInf",
+        "IsNan",
+        "Less",
+        "LessEqual",
+        "Max",
+        "Maximum",
+        "MaxPool",
+        "MaxPool3D",
+        "MaxPool3DGrad",
+        "MaxPoolGrad",
+        "MaxPoolGradGrad",
+        "MaxPoolGradGradV2",
+        "MaxPoolGradV2",
+        "MaxPoolV2",
+        "Merge",
+        "Min",
+        "Minimum",
+        "MirrorPad",
+        "MirrorPadGrad",
+        "Neg",
+        "NextIteration",
+        "NotEqual",
+        "OnesLike",
+        "Pack",
+        "Pad",
+        "PadV2",
+        "PreventGradient",
+        "Rank",
+        "Relu",
+        "Relu6",
+        "Relu6Grad",
+        "ReluGrad",
+        "Reshape",
+        "ResizeNearestNeighbor",
+        "ResizeNearestNeighborGrad",
+        "Reverse",
+        "ReverseSequence",
+        "ReverseV2",
+        "Round",
+        "Select",
+        "SelectV2",
+        "Shape",
+        "ShapeN",
+        "Sign",
+        "Slice",
+        "Snapshot",
+        "SpaceToBatch",
+        "SpaceToBatchND",
+        "SpaceToDepth",
+        "Split",
+        "SplitV",
+        "Squeeze",
+        "StopGradient",
+        "StridedSlice",
+        "StridedSliceGrad",
+        "Switch",
+        "Tile",
+        "TopK",
+        "TopKV2",
+        "Transpose",
+        "Where",
+        "Unpack",
+        "ZerosLike",
+    };
+    AddTensorListOps(&list);
+    UpdateList("CLEARLIST", &list);
+    return list;
+  }
+};
 
 }  // end namespace grappler
 }  // end namespace tensorflow

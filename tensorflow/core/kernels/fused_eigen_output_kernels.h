@@ -30,6 +30,7 @@ limitations under the License.
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/tensor_types.h"
+#include "tensorflow/core/util/port.h"
 
 namespace tensorflow {
 
@@ -42,6 +43,8 @@ enum class FusedComputationType {
   kBiasAddWithSigmoid,
   kBiasAddWithElu,
   kBiasAddWithLeakyRelu,
+  kBiasAddWithAdd,
+  kBiasAddWithAddAndRelu,
   kBiasAddWithGeluApproximate,
   kBiasAddWithGeluExact,
   kFusedBatchNorm,
@@ -139,11 +142,18 @@ struct BiasAddArgs {
   float leakyrelu_alpha;
 
   static bool IsSupported(FusedComputationType fusion) {
-    return fusion == FusedComputationType::kBiasAdd ||
-           fusion == FusedComputationType::kBiasAddWithRelu ||
-           fusion == FusedComputationType::kBiasAddWithRelu6 ||
-           fusion == FusedComputationType::kBiasAddWithElu ||
-           fusion == FusedComputationType::kBiasAddWithLeakyRelu;
+    bool result = fusion == FusedComputationType::kBiasAdd ||
+	        fusion == FusedComputationType::kBiasAddWithRelu ||
+		fusion == FusedComputationType::kBiasAddWithRelu6 ||
+		fusion == FusedComputationType::kBiasAddWithElu ||
+		fusion == FusedComputationType::kBiasAddWithLeakyRelu ||
+		fusion == FusedComputationType::kBiasAddWithGeluApproximate ||
+		fusion == FusedComputationType::kBiasAddWithGeluExact;
+    if (IsZenDnnEnabled()) {
+      result = result || fusion == FusedComputationType::kBiasAddWithAdd ||
+	       fusion == FusedComputationType::kBiasAddWithAddAndRelu;
+    }
+    return result;
   }
 };
 

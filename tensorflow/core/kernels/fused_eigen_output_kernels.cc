@@ -18,7 +18,6 @@ limitations under the License.
 #include <string>
 
 #include "absl/strings/str_join.h"
-
 namespace tensorflow {
 
 Status InitializeFusedComputation(
@@ -43,7 +42,7 @@ Status InitializeFusedComputation(
     num_host_args = 0;  // default value
   }
   int num_inputs = context->num_inputs();
-  if (num_inputs != 2 + num_args + num_host_args) {
+  if ((num_inputs != 2 + num_args + num_host_args) && kernel_name !="ZenConv2D") {
     return errors::InvalidArgument(
         "Fused ", kernel_name,
         " must have the number of inputs equal to 2 + num_args + num_host_args "

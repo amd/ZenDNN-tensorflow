@@ -694,6 +694,9 @@ class Tensor {
   friend class VariableOp;            // For access to set_shape.
   friend class AutoReloadVariableOp;  // For access to set_shape.
   friend class TensorTestHelper;      // For access to set_shape.
+  friend class ZenMemoryPoolBase;         // For access to set_shape.
+  template<typename T>
+  friend class ZenMemoryPool;         // For access to set_shape.
   friend class TensorInterface;       // For access to set_shape.
   friend class CastOpBase;            // For access to set_dtype.
   friend class ScopedAllocator;       // For access to buf_.

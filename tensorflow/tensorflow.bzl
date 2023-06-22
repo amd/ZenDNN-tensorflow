@@ -47,6 +47,10 @@ load(
     "if_mkl_ml",
 )
 load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "if_zendnn",
+)
+load(
     "//third_party/mkl_dnn:build_defs.bzl",
     "if_mkldnn_aarch64_acl",
     "if_mkldnn_aarch64_acl_openmp",
@@ -301,11 +305,6 @@ def if_override_eigen_strong_inline(a):
 
 if_nccl = _if_nccl
 
-def if_zendnn(if_true, if_false = []):
-    return select({
-        clean_dep("//tensorflow:linux_x86_64"): if_true,
-        "//conditions:default": if_false,
-    })
 
 def if_libtpu(if_true, if_false = []):
     """Shorthand for select()ing whether to build backend support for TPUs when building libtpu.so"""
@@ -2026,6 +2025,46 @@ def tf_mkl_kernel_library(
         hdrs = hdrs,
         deps = deps,
         linkopts = linkopts,
+        alwayslink = alwayslink,
+        copts = copts + if_override_eigen_strong_inline(["/DEIGEN_STRONG_INLINE=inline"]),
+        features = disable_header_modules,
+    )
+
+def tf_zendnn_kernel_library(
+        name,
+        prefix = None,
+        srcs = None,
+        hdrs = None,
+        deps = None,
+        alwayslink = 1,
+        # Adding an explicit `-fexceptions` because `allow_exceptions = True`
+        # in `tf_copts` doesn't work internally.
+        copts = tf_copts() + ["-fexceptions"] + ["-fopenmp"] +  tf_openmp_copts()):
+    """A rule to build ZenDNN-based TensorFlow kernel libraries."""
+
+    if not bool(srcs):
+        srcs = []
+    if not bool(hdrs):
+        hdrs = []
+
+    if prefix:
+        srcs = srcs + native.glob(
+            [prefix + "*.cc"],
+            exclude = [prefix + "*test*"],
+        )
+        hdrs = hdrs + native.glob(
+            [prefix + "*.h"],
+            exclude = [prefix + "*test*"],
+        )
+
+    # -fno-exceptions in nocopts breaks compilation if header modules are enabled.
+    disable_header_modules = ["-use_header_modules"]
+
+    cc_library(
+        name = name,
+        srcs = if_zendnn(srcs),
+        hdrs = hdrs,
+        deps = deps,
         alwayslink = alwayslink,
         copts = copts + if_override_eigen_strong_inline(["/DEIGEN_STRONG_INLINE=inline"]),
         features = disable_header_modules,

@@ -73,6 +73,8 @@ string GetPaddingAttrStringWithExplicit() {
   return "padding: {'SAME', 'VALID', 'EXPLICIT'}";
 }
 
+string GetVitisDwPaddingAttrString() { return "dw_padding: {'SAME', 'VALID'}"; }
+
 string GetExplicitPaddingsAttrString() {
   return "explicit_paddings: list(int) = []";
 }

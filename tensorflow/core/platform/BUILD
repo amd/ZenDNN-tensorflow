@@ -45,6 +45,10 @@ load(
     "@local_config_rocm//rocm:build_defs.bzl",
     "if_rocm_is_configured",
 )
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "zendnn_deps",
+)
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("//tensorflow:tensorflow.default.bzl", "filegroup", "get_compatible_with_portable", "tf_cuda_cc_test")
 
@@ -205,7 +209,7 @@ cc_library(
         ":platform_port",
         "//tensorflow/tsl/platform:platform_port",
         "@com_google_absl//absl/base",
-    ],
+    ] + zendnn_deps(),
 )
 
 # Required to avoid ODR issues in the pybind wrapper.

@@ -125,10 +125,10 @@ bool IsMklEnabled() {
 
 bool IsZenDnnEnabled() {
 #ifndef AMD_ZENDNN
-  return false;
+  return true;
 #else
   static absl::once_flag once;
-  static bool ZenDNN_enabled = false;
+  static bool ZenDNN_enabled = true;
   absl::call_once(once, [&] {
     auto status = ReadBoolFromEnvVar("TF_ENABLE_ZENDNN_OPTS", ZenDNN_enabled,
                                      &ZenDNN_enabled);
@@ -144,6 +144,9 @@ bool IsZenDnnEnabled() {
                 << "floating-point round-off errors from different computation "
                 << "orders. To turn them off, set the environment variable "
                 << "`TF_ENABLE_ZENDNN_OPTS=0`.";
+      if (getenv("TF_ENABLE_ZENDNN_OPTS") != "0") {
+        setenv("TF_ENABLE_ONEDNN_OPTS", "0", 1);
+      }
     }
   });
   return ZenDNN_enabled;

@@ -111,6 +111,10 @@ load(
     "//third_party/mkl:build_defs.bzl",
     "if_mkl",
 )
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "if_zendnn",
+)
 
 package(
     # copybara:uncomment default_applicable_licenses = ["//tensorflow:license"],
@@ -628,7 +632,18 @@ cc_library(
         "//tensorflow/core/kernels/linalg:linalg",
         "//tensorflow/core/kernels/image:image",
         "//tensorflow/core/kernels/sparse:kernels",
-    ] + if_mkl([
+    ] + if_zendnn([
+        "//tensorflow/core/kernels/zendnn:zen_conv_ops",
+        "//tensorflow/core/kernels/zendnn:zen_pool_ops",
+        "//tensorflow/core/kernels/zendnn:zen_concat_ops",
+        "//tensorflow/core/kernels/zendnn:zen_einsum_op",
+        "//tensorflow/core/kernels/zendnn:zen_matmul_op",
+        "//tensorflow/core/kernels/zendnn:zen_cwise_op",
+        "//tensorflow/core/kernels/zendnn:zen_transpose_op",
+        "//tensorflow/core/kernels/zendnn:zen_reshape_op",
+        "//tensorflow/core/kernels/zendnn:zen_softmax_op",
+        "//tensorflow/core/kernels/zendnn:zen_fused_batch_norm_op",
+    ]) + if_mkl([
         "//tensorflow/core/kernels/mkl:mkl_aggregate_ops",
         "//tensorflow/core/kernels/mkl:mkl_concat_op",
         "//tensorflow/core/kernels/mkl:mkl_dequantize_op",

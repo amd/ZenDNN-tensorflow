@@ -177,6 +177,18 @@ function prepare_src() {
           cp -R ${RUNFILES}/${so_lib_dir}/${mkl_so_dir} "${TMPDIR}/${so_lib_dir}"
         fi
       fi
+      # Copy ZenDNN libs over so they can be loaded at runtime
+      so_lib_dir=$(ls $RUNFILES | grep solib) || true
+      if [ -n "${so_lib_dir}" ]; then
+        zen_so_dirs=$(ls ${RUNFILES}/${so_lib_dir} | grep -i zen) || true
+        if [ -n "${zen_so_dirs}" ]; then
+          mkdir "${TMPDIR}/${so_lib_dir}"
+          for dir in ${zen_so_dirs}
+          do
+            cp -R ${RUNFILES}/${so_lib_dir}/${dir} "${TMPDIR}/${so_lib_dir}"
+          done
+        fi
+      fi
     else
       # New-style runfiles structure (--nolegacy_external_runfiles).
       cp -L \
@@ -200,6 +212,18 @@ function prepare_src() {
         if [ -n "${mkl_so_dir}" ]; then
           mkdir "${TMPDIR}/${so_lib_dir}"
           cp -R ${RUNFILES}/${so_lib_dir}/${mkl_so_dir} "${TMPDIR}/${so_lib_dir}"
+        fi
+      fi
+      # Copy ZenDNN libs over so they can be loaded at runtime
+      so_lib_dir=$(ls $RUNFILES | grep solib) || true
+      if [ -n "${so_lib_dir}" ]; then
+        zen_so_dirs=$(ls ${RUNFILES}/${so_lib_dir} | grep -i zen) || true
+        if [ -n "${zen_so_dirs}" ]; then
+          mkdir "${TMPDIR}/${so_lib_dir}"
+          for dir in ${zen_so_dirs}
+          do
+            cp -R ${RUNFILES}/${so_lib_dir}/${dir} "${TMPDIR}/${so_lib_dir}"
+          done
         fi
       fi
     fi

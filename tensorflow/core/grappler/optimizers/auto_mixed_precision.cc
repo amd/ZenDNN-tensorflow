@@ -47,6 +47,7 @@ limitations under the License.
 #include "tensorflow/core/platform/status.h"
 #include "tensorflow/core/platform/statusor.h"
 #include "tensorflow/core/util/env_var.h"
+#include "tensorflow/core/util/port.h"
 
 namespace tensorflow {
 namespace grappler {
@@ -1067,6 +1068,8 @@ class AutoMixedPrecisionImpl {
                                                              cudnn_version_);
       case AutoMixedPrecisionMode::BF16:
         return std::make_unique<AutoMixedPrecisionListsMkl>();
+      case AutoMixedPrecisionMode::ZEN:
+	return std::make_unique<AutoMixedPrecisionListsZen>();
       case AutoMixedPrecisionMode::CPU:
         // Note: this is not a typo here. AutoMixedPrecisionListsCuda is used
         // intentionally to make CPU and GPU have the same fp16 ops.
@@ -1391,7 +1394,13 @@ Status AutoMixedPrecisionImpl::Optimize() {
         "TF_AUTO_MIXED_PRECISION_GRAPH_REWRITE_LEVEL cannot be set to "
         "UNSAFE_FORCE_ALL when oneDNN is used");
   }
-
+  if (force_all_fp16_ && mode_ == AutoMixedPrecisionMode::ZEN) {
+    // Many ops do not support bfloat16 on the CPU so we disallowing forcing to
+    // bfloat16.
+    return errors::InvalidArgument(
+	"TF_AUTO_MIXED_PRECISION_GRAPH_REWRITE_LEVEL cannot be set to "
+	"UNSAFE_FORCE_ALL when ZenDNN is used");
+  }
   treat_infer_as_deny_ = optimization_level == "TREAT_INFER_AS_DENY";
   VLOG(2) << "Optimization Level: " << optimization_level;
 
@@ -1427,6 +1436,7 @@ Status AutoMixedPrecisionImpl::Optimize() {
             (ShouldIgnorePerformance() || IsOnSuitableGPUArch(node));
         break;
       case AutoMixedPrecisionMode::BF16:
+      case AutoMixedPrecisionMode::ZEN:
       case AutoMixedPrecisionMode::CPU:
         device_type = DEVICE_CPU;
         should_process = !MustPreserve(node) && IsOnDevice(node, device_type);
@@ -1857,7 +1867,8 @@ void AutoMixedPrecisionImpl::AddInferToAllowIfFollowAllow(
     const absl::flat_hash_set<int>& deny_set,
     absl::flat_hash_set<int>* allow_set) const {
   // Currently only target for oneDNN
-  if (mode_ != AutoMixedPrecisionMode::BF16) {
+  if (mode_ != AutoMixedPrecisionMode::BF16 &&
+      mode_ != AutoMixedPrecisionMode::ZEN) {
     return;
   }
   for (int item_idx = 0; item_idx < graph_type_view_.num_nodes(); ++item_idx) {
@@ -2293,7 +2304,16 @@ Status AutoMixedPrecision::Optimize(Cluster* cluster, const GrapplerItem& item,
         "tensorflow-installation-guide");
   }
 #endif  // INTEL_MKL
-
+  // if ZenDNN is not used for inference,
+  // then donot enable auto_precision_zen
+  if (!IsZenDnnEnabled()) {
+    if (mode_ == AutoMixedPrecisionMode::ZEN) {
+      return errors::Unimplemented(
+          "The auto_mixed_precision_zen optimizer cannot be used since "
+	  "this build of TensorFlow is not compiled with ZenDNN support for "
+	  "bfloat16 hence default mode is FP32");
+    }
+  }
   // Start by copying input graph to output.
   *output = item.graph;
 

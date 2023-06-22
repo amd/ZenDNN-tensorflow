@@ -66,6 +66,7 @@ const ConfigList& DefaultPluginConfigs() {
        {"auto_mixed_precision", RewriterConfig::ON},
        {"auto_mixed_precision_onednn_bfloat16", RewriterConfig::ON},
        {"auto_mixed_precision_mkl", RewriterConfig::ON},
+       {"auto_mixed_precision_zen", RewriterConfig::ON},
        {"auto_mixed_precision_cpu", RewriterConfig::ON},
        {"pin_to_host_optimization", RewriterConfig::ON},
        {"layout_optimizer", RewriterConfig::ON},

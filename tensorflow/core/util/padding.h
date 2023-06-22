@@ -58,6 +58,8 @@ std::string GetPaddingAttrString();
 // Like GetPaddingAttrString(), but also includes EXPLICIT.
 std::string GetPaddingAttrStringWithExplicit();
 
+std::string GetVitisDwPaddingAttrString();
+
 std::string GetExplicitPaddingsAttrString();
 
 // Sets padding value based on the given string padding value.

@@ -67,6 +67,7 @@ tf_gen_op_libs(
         "manip_ops",
         "math_ops",
         "mkl_nn_ops",
+        "zen_nn_ops",
         "nccl_ops",
         "nn_ops",
         "no_op",
@@ -321,6 +322,7 @@ cc_library(
         ":training_ops_op_lib",
         ":uniform_quant_ops_op_lib",
         ":word2vec_ops",
+        ":zen_nn_ops",
     ] + select({
         # Non-tpu platforms don't need tpu dependency.
         "//tensorflow:chromiumos": [],
@@ -369,6 +371,18 @@ cc_library(
         "//tensorflow/core:lib",
     ],
     alwayslink = 1,
+)
+
+cc_library(
+    name="zen_nn_ops",
+    srcs = [
+        "zen_nn_ops.cc",
+        "zen_shape_util.cc"
+    ],
+    hdrs = ["zen_shape_util.h"],
+    deps = [
+        "//tensorflow/core:framework",
+    ],
 )
 
 cc_library(
