@@ -526,22 +526,107 @@ class ZenVitisAIConv2DOp : public OpKernel {
                                  dimensions.pad_cols_before};
     memory::dims padding_right = {dimensions.pad_rows_after,
                                   dimensions.pad_cols_after};
+    // Check if pad values = 0
+    bool pad_zero =
+        (dimensions.pad_rows_before == 0 && dimensions.pad_cols_before == 0 &&
+         dimensions.pad_rows_after == 0 && dimensions.pad_cols_after == 0)
+            ? 1
+            : 0;
 
     bool is_conv_fp32 = std::is_same<Tinput, float>::value &&
                         std::is_same<Tinput, Toutput>::value;
+    bool is_input_s8 = std::is_same<Tinput, qint8>::value;
+    bool is_input_u8 = std::is_same<Tinput, quint8>::value;
+    bool is_output_qint8 = std::is_same<Toutput, qint8>::value;
+    memory::desc filter_memory_desc;
 
     // Define memory desc for creating primitives
     memory::desc src_memory_desc = memory::desc(
         {src_dims}, DataTypetoZenForInput<Tinput, Toutput>(), tag::nhwc);
-    memory::desc filter_memory_desc =
-        memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::any);
+    if (dimensions.filter_rows == 1 && dimensions.stride_rows == 1 &&
+        pad_zero && is_output_qint8) {
+      filter_memory_desc =
+          memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::hwcn);
+    } else {
+      filter_memory_desc =
+          memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::any);
+    }
     memory::desc dst_memory_desc = memory::desc(
         {dst_dims}, DataTypetoZenForOutput<Toutput, Tsum>(), tag::nhwc);
+
+    // Depending on the dimensions of Conv,
+    // LPGEMM path will be taken
+    int use_lpgemm = 0;
+    // TODO: Enable environment variable to use LPGEMM
+    // LPGEMM is disabled by default
+    // Set environment variable LPGEMM_PATH_ENABLED to 1
+    // to use LPGEMM path for selective Conv ops
+    // const char* lpgemm_env = std::getenv("LPGEMM_PATH_ENABLED");
+    // if(lpgemm_env) use_lpgemm = atoi(lpgemm_env);
+    // if(use_lpgemm != 0) {
+    //     use_lpgemm = 1;
+    // }
+    // If disabled, s32 API of LPGEMM will be used.
+    // s32 API is for Genoa systems.
+    // s16 API works on all systems.
+    bool s16_lpgemm_enabled = 0;
+    // TODO: Enable environment variable to use S16 LPGEMM
+    // Set environment variable S16_LPGEMM_ENABLED to 1
+    // to use S16 API of LPGEMM (must for Milan / Systems
+    // without AVX512 support)
+    // const char* s16_env = std::getenv("S16_LPGEMM_ENABLED");
+    // if(s16_env) s16_lpgemm_enabled = atoi(s16_env);
+    // if(s16_lpgemm_enabled != 0) {
+    //       s16_lpgemm_enabled = 1;
+    // }
+
+    // Conditions when LPGEMM path is enabled
+    // Environment variable LPGEMM_PATH_ENABLED is set
+    // Filter size is 1x1
+    // Stride = 1
+    // Pad = 0
+    // Output datatype = s8
+    // Input datatype = s8 or u8
+    if (use_lpgemm == 1 && dimensions.filter_rows == 1 && dimensions.stride_rows == 1 &&
+        pad_zero && is_output_qint8 && (is_input_s8 || is_input_u8)) {
+        use_lpgemm = 1;
+    }
+    else {
+        use_lpgemm = 0;
+    }
+
+    // Select the correct LPGEMM algorithm type
+    // 4 LPGEMM APIs supported
+    // u8s8s32os8
+    // s8s8s32os8
+    // u8s8s16os8
+    // s8s8s16os8
+    zendnn::algorithm algorithm_conv = zendnn::algorithm::convolution_direct;
+    if (use_lpgemm) {
+      // Default type is (Input: u8, Filter: s8, Accumulation: s32)
+      algorithm_conv = zendnn::algorithm::convolution_gemm_u8s8s32os8;
+      // Input is u8
+      if (is_input_u8 && s16_lpgemm_enabled == 0) {
+          algorithm_conv = zendnn::algorithm::convolution_gemm_u8s8s32os8;
+      }
+      // Input is s8
+      else if (is_input_s8 && s16_lpgemm_enabled == 0) {
+          algorithm_conv = zendnn::algorithm::convolution_gemm_s8s8s32os8;
+      }
+      // Input is u8; s16 path taken
+      else if (is_input_u8 && s16_lpgemm_enabled == 1) {
+          algorithm_conv = zendnn::algorithm::convolution_gemm_u8s8s16os8;
+      }
+      // Input is s8; s16 path taken
+      else if (is_input_s8 && s16_lpgemm_enabled == 1) {
+          algorithm_conv = zendnn::algorithm::convolution_gemm_s8s8s16os8;
+      }
+    }
 
     // create primitive without bias
     convolution_forward::desc conv_desc = zendnn::convolution_forward::desc(
         zendnn::prop_kind::forward_inference,
-        zendnn::algorithm::convolution_direct, src_memory_desc,
+        algorithm_conv /*zendnn::algorithm::convolution_direct*/, src_memory_desc,
         filter_memory_desc, dst_memory_desc, strides_dims, dilation_dims,
         padding_left, padding_right);
 
@@ -550,7 +635,7 @@ class ZenVitisAIConv2DOp : public OpKernel {
           memory::desc({bias_dims}, DataTypetoZen<Tbias>(), tag::x);
       conv_desc = zendnn::convolution_forward::desc(
           zendnn::prop_kind::forward_inference,
-          zendnn::algorithm::convolution_direct, src_memory_desc,
+          algorithm_conv /*zendnn::algorithm::convolution_direct*/, src_memory_desc,
           filter_memory_desc, bias_memory_desc, dst_memory_desc, strides_dims,
           dilation_dims, padding_left, padding_right);
     }
@@ -645,8 +730,26 @@ class ZenVitisAIConv2DOp : public OpKernel {
         conv_bias_reordered_memory =
             memory(conv_prim_desc.bias_desc(), engine, bias_data);
       }
-      conv_prim_args.insert(
-          {ZENDNN_ARG_BIAS, conv_bias_reordered_memory});  // bias
+
+      // Convert s32 BIAS to s16 if s16 LPGEMM path is used
+      // TODO: Support s16 datatype in reorder primitive
+      // Used for 2 LPGEMM APIs:
+      // u8s8s16os8
+      // s8s8s16os8
+      if (use_lpgemm == 1 && s16_lpgemm_enabled == 1) {
+        int32_t * bias_array_original = (int32_t *)(conv_bias_reordered_memory.get_data_handle());
+        int16_t * bias_array2 = new int16_t[bias_dims[0]];
+        for(int j=0; j<bias_dims[0]; ++j) {
+          bias_array2[j] = static_cast<int16_t>(bias_array_original[j]);
+        }
+        zendnn::memory conv_bias_reordered_memory_s16 = zendnn::memory({{bias_dims}, dt::s16, tag::a}, engine, bias_array2);
+        conv_prim_args.insert(
+          {ZENDNN_ARG_BIAS, conv_bias_reordered_memory_s16});
+      }
+      else {
+        conv_prim_args.insert(
+            {ZENDNN_ARG_BIAS, conv_bias_reordered_memory});  // bias
+      }
     }
 
     if (is_fused_depthwise) {
