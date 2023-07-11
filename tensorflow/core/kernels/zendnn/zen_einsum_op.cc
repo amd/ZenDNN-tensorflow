@@ -55,8 +55,6 @@ struct ZenEinsumHelper {
 
     bool trans_x = swap_free_and_contract[0];
     bool trans_y = !swap_free_and_contract[1];
-    TF_RETURN_IF_ERROR(
-        ctx->allocate_temp(DataTypeToEnum<T>::value, output_shape, output));
 
     if (!(lhs.dims() >= 2))
       return errors::InvalidArgument("In[0] ndims must be >= 2: ", lhs.dims());
@@ -93,7 +91,38 @@ struct ZenEinsumHelper {
     out_shape.AddDim(lhs_rows);
     out_shape.AddDim(rhs_cols);
 
-    // TODO: Add Mempool support
+    zenTensorType out_type = zenTensorType::FLOAT;
+    zendnnEnv zenEnvObj = readEnv();
+    Tensor *out = nullptr;
+    int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
+                           (ctx->expected_output_dtype(0) == DT_FLOAT);
+    int out_index = -1;
+    ZenMemoryPool<float> *zenPoolBuffer = NULL;
+
+    // ZenMemPool Optimization reuse o/p tensors from the pool. By default
+    //  its enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory
+    //  pool optimization
+    //  Cases where tensors in pool are not free or requested size is more
+    //  than available tensor size in Pool, control will fall back to
+    //  default way of allocation i.e. with allocate_output(..)
+    if (zenEnableMemPool) {
+      unsigned int threadID = getZenTFthreadId(std::this_thread::get_id());
+      zenPoolBuffer = ZenMemoryPool<float>::getZenMemPool(threadID);
+      if (zenPoolBuffer) {
+        int status = zenPoolBuffer->acquireZenPoolTensor(
+            ctx, &out, output_shape, out_links, reset, out_type, out_index);
+        if (status) {
+          zenEnableMemPool = false;
+        }
+      } else {
+        zenEnableMemPool = false;
+      }
+      *output = *out;
+    }
+    if (!zenEnableMemPool) {
+      TF_RETURN_IF_ERROR(
+          ctx->allocate_temp(DataTypeToEnum<T>::value, output_shape, output));
+    }
 
     if (lhs.NumElements() == 0 || rhs.NumElements() == 0) {
       functor::SetZeroFunctor<Device, T> f;
@@ -152,6 +181,13 @@ struct ZenEinsumHelper {
     if (output->dims() != 3) {
       TF_RETURN_IF_ERROR(EinsumHelper::ReshapeToRank3(
           *output, bcast.output_batch_size(), &output_reshaped));
+    }
+
+    // If ZenMemPool Optimization is enabled(default), update the state of
+    //  Memory pool based on input_array address
+    if (zenEnvObj.zenEnableMemPool && zenPoolBuffer) {
+      zenPoolBuffer->zenMemPoolFree(ctx, (void *)a_array[0]);
+      zenPoolBuffer->zenMemPoolFree(ctx, (void *)b_array[0]);
     }
 
     return OkStatus();
@@ -299,7 +335,7 @@ class ZenEinsum : public OpKernel {
 
 #define REGISTER_EINSUM_ZEN(TYPE)                                     \
   REGISTER_KERNEL_BUILDER(                                            \
-      Name("ZenEinsum").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
+      Name("_ZenEinsum").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
       ZenEinsum<CPUDevice, TYPE>);
 
 TF_CALL_float(REGISTER_EINSUM_ZEN);

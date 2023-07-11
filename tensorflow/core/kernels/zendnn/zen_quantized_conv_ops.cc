@@ -750,7 +750,7 @@ REGISTER_KERNEL_BUILDER(Name("_FusedVitisAIConv2DWithDepthwise").Device(DEVICE_C
 
 // Float in/out ZenVitisAIConv2D kernel combinations
 #define REGISTER_VITISAI_CONV2D_FLOAT(Tinput, Toutput)             \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIConv2D")                 \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIConv2D")                 \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<float>("Tfilter")    \
@@ -764,7 +764,7 @@ REGISTER_VITISAI_CONV2D_FLOAT(float, float);
 
 // All the required ZenVitisAIConv2D kernel combinations
 #define REGISTER_VITISAI_CONV2D(Tinput, Toutput)                   \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIConv2D")                 \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIConv2D")                 \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<float>("Tfilter")    \
@@ -785,7 +785,7 @@ REGISTER_VITISAI_CONV2D(quint8, float);
 
 // All the required ZenVitisAIDepthwiseConv2D kernel combinations
 #define REGISTER_VITISAI_CONV2D_DEPTHWISE(Tinput, Toutput)         \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIDepthwiseConv2D")        \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIDepthwiseConv2D")        \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<float>("Tfilter")    \
@@ -800,7 +800,7 @@ REGISTER_VITISAI_CONV2D_DEPTHWISE(quint8, quint8);
 
 // All the required ZenVitisAIConv2DWithSum kernel combinations
 #define REGISTER_VITISAI_CONV2D_SUM(Tinput, Toutput, Tsum)         \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIConv2DWithSum")          \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIConv2DWithSum")          \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<float>("Tfilter")    \
@@ -818,7 +818,7 @@ REGISTER_VITISAI_CONV2D_SUM(quint8, quint8, quint8);
 
 // All the required ZenVitisAIConv2DWithoutBias kernel combinations
 #define REGISTER_VITISAI_CONV2D_WITHOUT_BIAS(Tinput, Toutput)      \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIConv2DWithoutBias")      \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIConv2DWithoutBias")      \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<float>("Tfilter")    \

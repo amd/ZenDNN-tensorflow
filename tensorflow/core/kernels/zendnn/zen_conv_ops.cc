@@ -207,15 +207,15 @@ class ZenConvOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenConv2D").Device(DEVICE_CPU).TypeConstraint<float>("T"),
+    Name("_ZenConv2D").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenConvOp<float>);
 
-REGISTER_KERNEL_BUILDER(Name("ZenConv2D")
+REGISTER_KERNEL_BUILDER(Name("_ZenConv2D")
                             .Device(DEVICE_CPU)
                             .TypeConstraint<::tensorflow::bfloat16>("T"),
                         ZenConvOp<::tensorflow::bfloat16>);
 
-REGISTER_KERNEL_BUILDER(Name("ZenDepthwiseConv2dNative")
+REGISTER_KERNEL_BUILDER(Name("_ZenDepthwiseConv2dNative")
                             .Device(DEVICE_CPU)
                             .TypeConstraint<float>("T"),
                         ZenConvOp<float, true>);

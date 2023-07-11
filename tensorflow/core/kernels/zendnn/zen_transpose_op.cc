@@ -126,10 +126,10 @@ class ZenInvertPermutationOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenInvertPermutation").Device(DEVICE_CPU).TypeConstraint<int32>("T"),
+    Name("_ZenInvertPermutation").Device(DEVICE_CPU).TypeConstraint<int32>("T"),
     ZenInvertPermutationOp<int32>);
 REGISTER_KERNEL_BUILDER(
-    Name("ZenInvertPermutation").Device(DEVICE_CPU).TypeConstraint<int64>("T"),
+    Name("_ZenInvertPermutation").Device(DEVICE_CPU).TypeConstraint<int64>("T"),
     ZenInvertPermutationOp<int64>);
 
 namespace {
@@ -284,12 +284,12 @@ Status ConjugateZenTransposeCpuOp::DoTranspose(OpKernelContext *ctx,
 }
 
 #define REGISTER(T)                                     \
-  REGISTER_KERNEL_BUILDER(Name("ZenTranspose")          \
+  REGISTER_KERNEL_BUILDER(Name("_ZenTranspose")          \
                               .Device(DEVICE_CPU)       \
                               .TypeConstraint<T>("T")   \
                               .HostMemory("perm"),      \
                           ZenTransposeCpuOp);           \
-  REGISTER_KERNEL_BUILDER(Name("ZenConjugateTranspose") \
+  REGISTER_KERNEL_BUILDER(Name("_ZenConjugateTranspose") \
                               .Device(DEVICE_CPU)       \
                               .TypeConstraint<T>("T")   \
                               .HostMemory("perm"),      \

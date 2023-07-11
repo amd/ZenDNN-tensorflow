@@ -1,8 +1,4 @@
 load(
-    "//third_party/zen_dnn:build_defs.bzl",
-    "zendnn_deps",
-)
-load(
     "//tensorflow/core/platform:build_config.bzl",
     "tf_proto_library",
 )
@@ -528,7 +524,7 @@ cc_library(
         ":env_var",
         "//tensorflow/core/platform:platform_port",
         "@com_google_absl//absl/base",
-    ] + zendnn_deps(),
+    ],
     alwayslink = 1,
 )
 

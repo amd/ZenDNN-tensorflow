@@ -21,6 +21,8 @@ limitations under the License.
 #ifndef TENSORFLOW_CORE_UTIL_ZEN_UTIL_H_
 #define TENSORFLOW_CORE_UTIL_ZEN_UTIL_H_
 
+#ifdef AMD_ZENDNN
+
 #include <list>
 #include <memory>
 #include <string>
@@ -255,4 +257,6 @@ class FactoryKeyCreator {
 };
 
 }  // namespace tensorflow
+
+#endif  // AMD_ZENDNN
 #endif  // TENSORFLOW_CORE_UTIL_ZEN_UTIL_H_

@@ -132,12 +132,12 @@ ZenBinaryOpShared::ZenBinaryOpState::ZenBinaryOpState(OpKernelContext *ctx,
   ndims = static_cast<int>(bcast.x_reshape().size());
 }
 
-REGISTER(ZenBinaryOp, CPU, "ZenAdd", functor::add, float);
-REGISTER(ZenBinaryOp, CPU, "ZenAddV2", functor::add, float);
-REGISTER(ZenBinaryOp, CPU, "ZenSub", functor::sub, float);
-REGISTER(ZenBinaryOp, CPU, "ZenMul", functor::mul, float);
-REGISTER(ZenBinaryOp, CPU, "ZenMaximum", functor::maximum, float);
-REGISTER(ZenBinaryOp, CPU, "ZenSquaredDifference", functor::squared_difference,
+REGISTER(ZenBinaryOp, CPU, "_ZenAdd", functor::add, float);
+REGISTER(ZenBinaryOp, CPU, "_ZenAddV2", functor::add, float);
+REGISTER(ZenBinaryOp, CPU, "_ZenSub", functor::sub, float);
+REGISTER(ZenBinaryOp, CPU, "_ZenMul", functor::mul, float);
+REGISTER(ZenBinaryOp, CPU, "_ZenMaximum", functor::maximum, float);
+REGISTER(ZenBinaryOp, CPU, "_ZenSquaredDifference", functor::squared_difference,
          float);
 
 }  // end namespace tensorflow

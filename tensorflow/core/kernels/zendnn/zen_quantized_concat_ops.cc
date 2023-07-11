@@ -263,7 +263,7 @@ REGISTER_KERNEL_BUILDER(Name("VitisAIConcatV2").Device(DEVICE_CPU), NoOp);
 // All the required ZenVitisAIConcatV2 kernel combinations
 #define REGISTER_VITISAI_QUANTIZEV2(T) \
   REGISTER_KERNEL_BUILDER(             \
-      Name("ZenVitisAIConcatV2")      \
+      Name("_ZenVitisAIConcatV2")      \
           .Device(DEVICE_CPU)          \
           .TypeConstraint<T>("T"),     \
       ZenVitisAIConcatV2Op<T>)

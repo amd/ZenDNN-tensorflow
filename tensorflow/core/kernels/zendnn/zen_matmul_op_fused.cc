@@ -167,7 +167,7 @@ class ZenFusedMatMulOp : public OpKernel {
     }
 
     OP_REQUIRES_OK(context, InitializeFusedComputation(
-                                context, "ZenMatMul", patterns,
+                                context, "_ZenMatMul", patterns,
                                 &fused_computation_, &fused_computation_args_));
   }
 

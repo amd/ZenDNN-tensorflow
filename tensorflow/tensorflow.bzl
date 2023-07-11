@@ -47,10 +47,6 @@ load(
     "if_mkl_ml",
 )
 load(
-    "//third_party/zen_dnn:build_defs.bzl",
-    "if_zendnn",
-)
-load(
     "//third_party/mkl_dnn:build_defs.bzl",
     "if_mkldnn_aarch64_acl",
     "if_mkldnn_aarch64_acl_openmp",
@@ -305,6 +301,11 @@ def if_override_eigen_strong_inline(a):
 
 if_nccl = _if_nccl
 
+def if_zendnn(if_true, if_false = []):
+    return select({
+        clean_dep("//tensorflow:linux_x86_64"): if_true,
+        "//conditions:default": if_false,
+    })
 
 def if_libtpu(if_true, if_false = []):
     """Shorthand for select()ing whether to build backend support for TPUs when building libtpu.so"""

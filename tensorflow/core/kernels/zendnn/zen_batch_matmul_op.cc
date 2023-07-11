@@ -504,12 +504,12 @@ class ZenBatchMatMul : public OpKernel {
 
 #define REGISTER_BATCH_MATMUL_ZEN(TYPE)                                    \
   REGISTER_KERNEL_BUILDER(                                                 \
-      Name("ZenBatchMatMul").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
+      Name("_ZenBatchMatMul").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
       ZenBatchMatMul<CPUDevice, TYPE, false, false>);
 
 #define REGISTER_BATCH_MATMUL_ZEN_V2(TYPE)                                   \
   REGISTER_KERNEL_BUILDER(                                                   \
-      Name("ZenBatchMatMulV2").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
+      Name("_ZenBatchMatMulV2").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
       ZenBatchMatMul<CPUDevice, TYPE, true, false>);
 
 #define REGISTER_FUSED_BATCH_MATMUL_ZEN_V2(TYPE)          \

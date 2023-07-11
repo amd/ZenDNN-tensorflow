@@ -202,7 +202,7 @@ REGISTER_KERNEL_BUILDER(Name("VitisAIMaxPool").Device(DEVICE_CPU), NoOp);
 
 // All the required ZenVitisAIAvgPool kernel combinations
 #define REGISTER_VITISAI_AVGERAGE_POOL(Tinput, Toutput)            \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIAvgPool")                \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIAvgPool")                \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<Toutput>("Toutput"), \
@@ -216,7 +216,7 @@ REGISTER_VITISAI_AVGERAGE_POOL(quint8, float);
 
 // All the required ZenVitisAIMaxPool kernel combinations
 #define REGISTER_VITISAI_MAX_POOL(Tinput, Toutput)                 \
-  REGISTER_KERNEL_BUILDER(Name("ZenVitisAIMaxPool")                \
+  REGISTER_KERNEL_BUILDER(Name("_ZenVitisAIMaxPool")                \
                               .Device(DEVICE_CPU)                  \
                               .TypeConstraint<Tinput>("Tinput")    \
                               .TypeConstraint<Toutput>("Toutput"), \

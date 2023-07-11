@@ -190,7 +190,7 @@ class ZenSoftmaxOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenSoftmax").Device(DEVICE_CPU).TypeConstraint<float>("T"),
+    Name("_ZenSoftmax").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenSoftmaxOp<float>);
 
 }  // namespace tensorflow

@@ -196,7 +196,7 @@ Status SetOutputShapeForReshape(InferenceContext* c) {
   return OkStatus();
 }
 
-REGISTER_OP("ZenConv2D")
+REGISTER_OP("_ZenConv2D")
     .Input("input: T")
     .Input("filter: T")
     .Output("output: T")
@@ -214,7 +214,7 @@ REGISTER_OP("ZenConv2D")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
 
-REGISTER_OP("ZenDepthwiseConv2dNative")
+REGISTER_OP("_ZenDepthwiseConv2dNative")
     .Input("input: T")
     .Input("filter: T")
     .Output("output: T")
@@ -285,7 +285,7 @@ REGISTER_OP("_ZenFusedDepthwiseConv2dNative")
     // ---------------------------------------------------------------------- //
     .SetShapeFn(shape_inference::DepthwiseConv2DNativeShape);
 
-REGISTER_OP("ZenMaxPool")
+REGISTER_OP("_ZenMaxPool")
     .Attr(
         "T: {half, bfloat16, float, double, int32, int64, uint8, int16, int8, "
         "uint16, qint8} = DT_FLOAT")
@@ -303,7 +303,7 @@ REGISTER_OP("ZenMaxPool")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::MaxPoolShape);
 
-REGISTER_OP("ZenAvgPool")
+REGISTER_OP("_ZenAvgPool")
     .Attr(
         "T: {half, bfloat16, float, double, int32, int64, uint8, int16, int8, "
         "uint16, qint8} = DT_FLOAT")
@@ -320,7 +320,7 @@ REGISTER_OP("ZenAvgPool")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::AvgPoolShape);
 
-REGISTER_OP("ZenEinsum")
+REGISTER_OP("_ZenEinsum")
     .Input("inputs: N * T")
     .Output("output: T")
     .Attr("equation: string")
@@ -333,7 +333,7 @@ REGISTER_OP("ZenEinsum")
     .Attr("reset: bool = 0")
     .SetShapeFn(shape_inference::EinsumShape);
 
-REGISTER_OP("ZenMatMul")
+REGISTER_OP("_ZenMatMul")
     .Input("a: T")
     .Input("b: T")
     .Output("product: T")
@@ -349,7 +349,7 @@ REGISTER_OP("ZenMatMul")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::MatMulShape);
 
-REGISTER_OP("ZenBatchMatMul")
+REGISTER_OP("_ZenBatchMatMul")
     .Input("x: T")
     .Input("y: T")
     .Output("output: T")
@@ -365,7 +365,7 @@ REGISTER_OP("ZenBatchMatMul")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::BatchMatMulShape);
 
-REGISTER_OP("ZenBatchMatMulV2")
+REGISTER_OP("_ZenBatchMatMulV2")
     .Input("x: T")
     .Input("y: T")
     .Output("output: T")
@@ -404,7 +404,7 @@ REGISTER_OP("_ZenFusedBatchMatMulV2")
 expected to create these operators.
 )doc");
 
-REGISTER_OP("ZenSoftmax")
+REGISTER_OP("_ZenSoftmax")
     .Input("logits: T")
     .Output("softmax: T")
     .Attr("data_format: {'N', 'NC', 'TNC', 'NHWC'} = 'NHWC'")
@@ -418,7 +418,7 @@ REGISTER_OP("ZenSoftmax")
       return shape_inference::UnchangedShapeWithRankAtLeast(c, 1);
     });
 
-REGISTER_OP("ZenConcatV2")
+REGISTER_OP("_ZenConcatV2")
     .Input("values: N * T")
     .Input("axis: Tidx")
     .Output("output: T")
@@ -432,7 +432,7 @@ REGISTER_OP("ZenConcatV2")
     .Attr("Tidx: {int32, int64} = DT_INT32")
     .SetShapeFn(shape_inference::ConcatV2Shape);
 
-REGISTER_OP("ZenConcat")
+REGISTER_OP("_ZenConcat")
     .Input("concat_dim: int32")
     .Input("values: N * T")
     .Output("output: T")
@@ -600,7 +600,7 @@ REGISTER_OP("_ZenInception")
 expected to create this operator.
 )doc");
 
-REGISTER_OP("ZenAdd")
+REGISTER_OP("_ZenAdd")
     .Input("x: T")
     .Input("y: T")
     .Output("z: T")
@@ -612,7 +612,7 @@ REGISTER_OP("ZenAdd")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
 
-REGISTER_OP("ZenAddV2")
+REGISTER_OP("_ZenAddV2")
     .Input("x: T")
     .Input("y: T")
     .Output("z: T")
@@ -626,7 +626,7 @@ REGISTER_OP("ZenAddV2")
     .SetIsAggregate()
     .SetIsCommutative();
 
-REGISTER_OP("ZenSub")
+REGISTER_OP("_ZenSub")
     .Input("x: T")
     .Input("y: T")
     .Output("z: T")
@@ -638,32 +638,7 @@ REGISTER_OP("ZenSub")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
 
-REGISTER_OP("ZenMul")
-    .Input("x: T")
-    .Input("y: T")
-    .Output("z: T")
-    .Attr("T: {float}")
-    .Attr("reorder_before: bool")
-    .Attr("reorder_after: bool")
-    .Attr("in_links: int")
-    .Attr("out_links: int")
-    .Attr("reset: bool")
-    .SetIsCommutative()
-    .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
-
-REGISTER_OP("ZenMaximum")
-    .Input("x: T")
-    .Input("y: T")
-    .Output("z: T")
-    .Attr("reorder_before: bool")
-    .Attr("reorder_after: bool")
-    .Attr("in_links: int")
-    .Attr("out_links: int")
-    .Attr("reset: bool")
-    .Attr("T: {float}")
-    .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
-
-REGISTER_OP("ZenSquaredDifference")
+REGISTER_OP("_ZenMul")
     .Input("x: T")
     .Input("y: T")
     .Output("z: T")
@@ -676,7 +651,32 @@ REGISTER_OP("ZenSquaredDifference")
     .SetIsCommutative()
     .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
 
-REGISTER_OP("ZenReshape")
+REGISTER_OP("_ZenMaximum")
+    .Input("x: T")
+    .Input("y: T")
+    .Output("z: T")
+    .Attr("reorder_before: bool")
+    .Attr("reorder_after: bool")
+    .Attr("in_links: int")
+    .Attr("out_links: int")
+    .Attr("reset: bool")
+    .Attr("T: {float}")
+    .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
+
+REGISTER_OP("_ZenSquaredDifference")
+    .Input("x: T")
+    .Input("y: T")
+    .Output("z: T")
+    .Attr("T: {float}")
+    .Attr("reorder_before: bool")
+    .Attr("reorder_after: bool")
+    .Attr("in_links: int")
+    .Attr("out_links: int")
+    .Attr("reset: bool")
+    .SetIsCommutative()
+    .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn);
+
+REGISTER_OP("_ZenReshape")
     .Input("tensor: T")
     .Input("shape: Tshape")
     .Output("output: T")
@@ -689,7 +689,7 @@ REGISTER_OP("ZenReshape")
     .Attr("reset: bool")
     .SetShapeFn(SetOutputShapeForReshape);
 
-REGISTER_OP("ZenTranspose")
+REGISTER_OP("_ZenTranspose")
     .Input("x: T")
     .Input("perm: Tperm")
     .Output("y: T")
@@ -702,7 +702,7 @@ REGISTER_OP("ZenTranspose")
     .Attr("reset: bool")
     .SetShapeFn(TransposeShapeFn);
 
-REGISTER_OP("ZenConjugateTranspose")
+REGISTER_OP("_ZenConjugateTranspose")
     .Input("x: T")
     .Input("perm: Tperm")
     .Output("y: T")
@@ -715,7 +715,7 @@ REGISTER_OP("ZenConjugateTranspose")
     .Attr("reset: bool")
     .SetShapeFn(TransposeShapeFn);
 
-REGISTER_OP("ZenInvertPermutation")
+REGISTER_OP("_ZenInvertPermutation")
     .Input("x: T")
     .Output("y: T")
     .Attr("T: {int32, int64} = DT_INT32")
@@ -731,7 +731,7 @@ REGISTER_OP("ZenInvertPermutation")
       return OkStatus();
     });
 
-REGISTER_OP("ZenFusedBatchNorm")
+REGISTER_OP("_ZenFusedBatchNorm")
     .Input("x: T")
     .Input("scale: T")
     .Input("offset: T")
@@ -754,7 +754,7 @@ REGISTER_OP("ZenFusedBatchNorm")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::FusedBatchNormShape);
 
-REGISTER_OP("ZenFusedBatchNormV2")
+REGISTER_OP("_ZenFusedBatchNormV2")
     .Input("x: T")
     .Input("scale: U")
     .Input("offset: U")
@@ -778,7 +778,7 @@ REGISTER_OP("ZenFusedBatchNormV2")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::FusedBatchNormShape);
 
-REGISTER_OP("ZenFusedBatchNormV3")
+REGISTER_OP("_ZenFusedBatchNormV3")
     .Input("x: T")
     .Input("scale: U")
     .Input("offset: U")
@@ -845,7 +845,7 @@ REGISTER_OP("_ZenQuantizedConv2DAndRequantize")
       return OkStatus();
     });
 
-REGISTER_OP("ZenQuantizedMaxPool")
+REGISTER_OP("_ZenQuantizedMaxPool")
     .Input("input:           T")
     .Input("min_input:       float")
     .Input("max_input:       float")
@@ -871,7 +871,7 @@ REGISTER_OP("ZenQuantizedMaxPool")
       return OkStatus();
     });
 
-REGISTER_OP("ZenQuantizedAvgPool")
+REGISTER_OP("_ZenQuantizedAvgPool")
     .Input("input:           T")
     .Input("min_input:       float")
     .Input("max_input:       float")
@@ -1360,7 +1360,7 @@ REGISTER_OP("VitisAIConcatV2")
     .Attr("Tidx: {int32, int64} = DT_INT32")
     .SetShapeFn(shape_inference::ConcatV2Shape);
 
-REGISTER_OP("ZenVitisAIConv2DWithoutBias")
+REGISTER_OP("_ZenVitisAIConv2DWithoutBias")
     .Input("input: Tinput")
     .Input("filter: Tfilter")
     .Output("output: Toutput")
@@ -1384,7 +1384,7 @@ REGISTER_OP("ZenVitisAIConv2DWithoutBias")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
 
-REGISTER_OP("ZenVitisAIConv2D")
+REGISTER_OP("_ZenVitisAIConv2D")
     .Input("input: Tinput")
     .Input("filter: Tfilter")
     .Input("bias: Tbias")
@@ -1411,7 +1411,7 @@ REGISTER_OP("ZenVitisAIConv2D")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
 
-REGISTER_OP("ZenVitisAIConv2DWithSum")
+REGISTER_OP("_ZenVitisAIConv2DWithSum")
     .Input("input: Tinput")
     .Input("filter: Tfilter")
     .Input("bias: Tbias")
@@ -1441,7 +1441,7 @@ REGISTER_OP("ZenVitisAIConv2DWithSum")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::Conv2DShapeWithExplicitPadding);
 
-REGISTER_OP("ZenVitisAIDepthwiseConv2D")
+REGISTER_OP("_ZenVitisAIDepthwiseConv2D")
     .Input("input: Tinput")
     .Input("filter: Tfilter")
     .Input("bias: Tbias")
@@ -1503,7 +1503,7 @@ REGISTER_OP("_ZenFusedVitisAIConv2DWithDepthwise")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::DepthwiseConv2DNativeShape);
 
-REGISTER_OP("ZenVitisAIMaxPool")
+REGISTER_OP("_ZenVitisAIMaxPool")
     .Input("input: Tinput")
     .Output("output: Toutput")
     .Attr("Tinput: type")
@@ -1519,7 +1519,7 @@ REGISTER_OP("ZenVitisAIMaxPool")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::MaxPoolShape);
 
-REGISTER_OP("ZenVitisAIAvgPool")
+REGISTER_OP("_ZenVitisAIAvgPool")
     .Input("input: Tinput")
     .Output("output: Toutput")
     .Attr("Tinput: type")
@@ -1535,7 +1535,7 @@ REGISTER_OP("ZenVitisAIAvgPool")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::AvgPoolShape);
 
-REGISTER_OP("ZenVitisAIConcatV2")
+REGISTER_OP("_ZenVitisAIConcatV2")
     .Input("values: N * T")
     .Input("axis: Tidx")
     .Output("output: T")

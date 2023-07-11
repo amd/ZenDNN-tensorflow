@@ -536,12 +536,12 @@ template <typename T>
 using ZenConcatV2Op = ZenConcatBaseOp<T, NAME_IS_AXIS>;
 
 #define REGISTER_CONCAT(type)                            \
-  REGISTER_KERNEL_BUILDER(Name("ZenConcat")              \
+  REGISTER_KERNEL_BUILDER(Name("_ZenConcat")              \
                               .Device(DEVICE_CPU)        \
                               .TypeConstraint<type>("T") \
                               .HostMemory("concat_dim"), \
                           ZenConcatOp<type>)             \
-  REGISTER_KERNEL_BUILDER(Name("ZenConcatV2")            \
+  REGISTER_KERNEL_BUILDER(Name("_ZenConcatV2")            \
                               .Device(DEVICE_CPU)        \
                               .TypeConstraint<type>("T") \
                               .HostMemory("axis"),       \

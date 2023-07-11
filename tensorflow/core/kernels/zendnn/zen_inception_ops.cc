@@ -503,7 +503,7 @@ class ZenFusedInceptionOp : public OpKernel {
     };
 
     OP_REQUIRES_OK(context, InitializeFusedComputation(
-                                context, "ZenConv2D", patterns,
+                                context, "_ZenConv2D", patterns,
                                 &fused_computation_, &fused_computation_args_));
   }
 

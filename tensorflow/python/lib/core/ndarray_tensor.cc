@@ -29,7 +29,6 @@ limitations under the License.
 #include "tensorflow/core/lib/gtl/inlined_vector.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/util/port.h"
-#include "tensorflow/core/util/port.h"
 #include "tensorflow/python/lib/core/ndarray_tensor_bridge.h"
 #include "tensorflow/tsl/python/lib/core/bfloat16.h"
 #include "tensorflow/tsl/python/lib/core/float8.h"
@@ -484,14 +483,9 @@ Status TF_TensorToPyArray(Safe_TF_TensorPtr tensor, PyObject** out_ndarray) {
   }
   // Default TF implementation compares ndarray bytes with TF_Tensor bytes
   // which is allocated using allocate_output API for fixed size.
-  // Here adding flexibility for TF users to work with PerAllocated buffer
-  // as a part of TF mem pool optimization, compare only the shape not the
-  // actual underlying bytes. As we allocate TF_Tensor from pool based on
-  // the requirement where amount of allocated TF_tensor bytes is >=
-  // requested bytes by the Op execution.
-  // This way same buffers can be used for different Op execution,
-  // just need to change the shape and keep below condition where instead
-  // of exact match of bytes will check for below condition.
+  // ZenDNN mempool optimization utilizes pre-allocated buffers with TF_Tensor.
+  // Hence, the amount of allocated TF_Tensor bytes is always greater than or
+  // equal to the number of bytes requested by the op execution.
   else if (IsZenDnnEnabled() && (static_cast<size_t>(PyArray_NBYTES(py_array)) >
                                  TF_TensorByteSize(tensor.get()))) {
     return errors::Internal("ndarray was ", PyArray_NBYTES(py_array),

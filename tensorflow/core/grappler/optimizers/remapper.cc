@@ -639,7 +639,7 @@ bool IsConvOrMatMul(const NodeDef& node) {
 bool IsBiasSemanticAdd(const RemapperContext& ctx,
                        const utils::MutableNodeView& node_view,
                        int& bias_port) {
-  if (!IsMKLEnabled()) return false;
+  if (!(IsZenDnnEnabled() || IsMKLEnabled())) return false;
 
   const auto* node_def = node_view.node();
   if (!NodeIsOnCpu(node_def)) return false;
@@ -1708,7 +1708,7 @@ bool FindMatMulBiasAddAndGelu(RemapperContext* ctx, int node_index,
         ctx->graph_view.GetNode(matched_nodes_map->at("matmul"))->node();
     DataType matmul_dtype = GetDataTypeFromAttr(*matmul_node, "T");
 
-    bool cpu_ok = (IsMKLEnabled() || IsZenDnnEnabled()) && IsCpuCompatibleMatMul(*ctx, matmul_node);
+    bool cpu_ok = (IsZenDnnEnabled() || IsMKLEnabled()) && IsCpuCompatibleMatMul(*ctx, matmul_node);
     // Currently, the fusion is not supported on CPU for transpose_a in the
     // MatMul op.
     cpu_ok = cpu_ok && matmul_node->attr().contains("transpose_a") &&

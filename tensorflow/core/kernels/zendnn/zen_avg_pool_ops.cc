@@ -524,19 +524,19 @@ class ZenAvgPoolOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenQuantizedAvgPool").Device(DEVICE_CPU).TypeConstraint<quint8>("T"),
+    Name("_ZenQuantizedAvgPool").Device(DEVICE_CPU).TypeConstraint<quint8>("T"),
     ZenAvgQuantizedPoolOp<quint8>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenQuantizedAvgPool").Device(DEVICE_CPU).TypeConstraint<qint8>("T"),
+    Name("_ZenQuantizedAvgPool").Device(DEVICE_CPU).TypeConstraint<qint8>("T"),
     ZenAvgQuantizedPoolOp<qint8>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenAvgPool").Device(DEVICE_CPU).TypeConstraint<float>("T"),
+    Name("_ZenAvgPool").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenAvgPoolOp<float>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenAvgPool").Device(DEVICE_CPU).TypeConstraint<bfloat16>("T"),
+    Name("_ZenAvgPool").Device(DEVICE_CPU).TypeConstraint<bfloat16>("T"),
     ZenAvgPoolOp<bfloat16>);
 
 }  // namespace tensorflow

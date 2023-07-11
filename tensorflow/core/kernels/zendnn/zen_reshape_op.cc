@@ -172,7 +172,7 @@ class ZenReshapeOp : public OpKernel {
 };
 
 #define REGISTER(T)                                   \
-  REGISTER_KERNEL_BUILDER(Name("ZenReshape")          \
+  REGISTER_KERNEL_BUILDER(Name("_ZenReshape")          \
                               .Device(DEVICE_CPU)     \
                               .TypeConstraint<T>("T") \
                               .HostMemory("shape"),   \

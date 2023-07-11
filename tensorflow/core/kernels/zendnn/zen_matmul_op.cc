@@ -169,7 +169,7 @@ class ZenMatMulOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenMatMul").Device(DEVICE_CPU).TypeConstraint<float>("T"),
+    Name("_ZenMatMul").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenMatMulOp<float, false>);
 
 REGISTER_KERNEL_BUILDER(

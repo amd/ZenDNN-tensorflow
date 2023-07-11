@@ -522,19 +522,19 @@ class ZenMaxPoolOp : public OpKernel {
 };
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenMaxPool").Device(DEVICE_CPU).TypeConstraint<float>("T"),
+    Name("_ZenMaxPool").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenMaxPoolOp<float>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenMaxPool").Device(DEVICE_CPU).TypeConstraint<bfloat16>("T"),
+    Name("_ZenMaxPool").Device(DEVICE_CPU).TypeConstraint<bfloat16>("T"),
     ZenMaxPoolOp<bfloat16>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenQuantizedMaxPool").Device(DEVICE_CPU).TypeConstraint<quint8>("T"),
+    Name("_ZenQuantizedMaxPool").Device(DEVICE_CPU).TypeConstraint<quint8>("T"),
     ZenMaxQuantizedPoolOp<quint8>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("ZenQuantizedMaxPool").Device(DEVICE_CPU).TypeConstraint<qint8>("T"),
+    Name("_ZenQuantizedMaxPool").Device(DEVICE_CPU).TypeConstraint<qint8>("T"),
     ZenMaxQuantizedPoolOp<qint8>);
 
 }  // namespace tensorflow

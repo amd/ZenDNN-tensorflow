@@ -750,14 +750,14 @@ class ZenFusedBatchNormOp : public OpKernel {
 
 #define REGISTER_ZEN_FUSED_BATCHNORM_CPU(T)                                \
   REGISTER_KERNEL_BUILDER(                                                 \
-      Name("ZenFusedBatchNorm").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      Name("_ZenFusedBatchNorm").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
       ZenFusedBatchNormOp<CPUDevice, T, T, false, false>);
 
 TF_CALL_float(REGISTER_ZEN_FUSED_BATCHNORM_CPU);
 #undef REGISTER_ZEN_FUSED_BATCHNORM_CPU
 
 #define REGISTER_ZEN_FUSED_BATCHNORM_V2_CPU(T, U)      \
-  REGISTER_KERNEL_BUILDER(Name("ZenFusedBatchNormV2")  \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormV2")  \
                               .Device(DEVICE_CPU)      \
                               .TypeConstraint<T>("T")  \
                               .TypeConstraint<U>("U"), \
@@ -770,7 +770,7 @@ REGISTER_ZEN_FUSED_BATCHNORM_V2_CPU(float, float);
 //       hold intermediate results. This parameter functionality is
 //       not implemented on CPU.
 #define REGISTER_ZEN_FUSED_BATCHNORM_V3_CPU(T, U)      \
-  REGISTER_KERNEL_BUILDER(Name("ZenFusedBatchNormV3")  \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchNormV3")  \
                               .Device(DEVICE_CPU)      \
                               .TypeConstraint<T>("T")  \
                               .TypeConstraint<U>("U"), \
