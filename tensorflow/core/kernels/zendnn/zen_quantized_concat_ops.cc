@@ -55,7 +55,7 @@ class ZenVitisAIConcatBaseOp : public OpKernel {
     OP_REQUIRES_OK(context, InputRange("values", &values_input_start_index_,
                                        &values_input_end_index_));
 
-    InitZendnnParameters(context, &zendnn_params_);
+    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
   }
 
   void Compute(OpKernelContext *context) override {
@@ -268,6 +268,7 @@ REGISTER_KERNEL_BUILDER(Name("VitisAIConcatV2").Device(DEVICE_CPU), NoOp);
           .TypeConstraint<T>("T"),     \
       ZenVitisAIConcatV2Op<T>)
 
+REGISTER_VITISAI_QUANTIZEV2(qint8);
 REGISTER_VITISAI_QUANTIZEV2(quint8);
 
 #undef REGISTER_VITISAI_QUANTIZEV2

@@ -1360,6 +1360,36 @@ REGISTER_OP("VitisAIConcatV2")
     .Attr("Tidx: {int32, int64} = DT_INT32")
     .SetShapeFn(shape_inference::ConcatV2Shape);
 
+REGISTER_OP("VitisAIResize")
+    .Input("images: T")
+    .Input("multiplier: int32")
+    .Output("resized_images: T")
+    .Attr("T: {quint8, qint8}")
+    .Attr("align_corners: bool = false")
+    .Attr("half_pixel_centers: bool = false")
+    .Attr("resize_algorithm: {'ResizeNearestNeighbor'}")
+    .SetShapeFn([](InferenceContext* c) {
+      ShapeHandle input;
+      ShapeHandle unused;
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 4, &input));
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(1), 1, &unused));
+      TF_RETURN_IF_ERROR(c->ReplaceDim(input, 1, c->UnknownDim(), &input));
+      TF_RETURN_IF_ERROR(c->ReplaceDim(input, 2, c->UnknownDim(), &input));
+      c->set_output(0, input);
+      return OkStatus();
+    });
+
+REGISTER_OP("VitisAIAddV2")
+    .Input("x: T")
+    .Input("y: T")
+    .Output("z: T")
+    .Attr("T: {qint8, quint8}")
+    .Attr("in_scale_0: int=0")
+    .Attr("in_scale_1: int=0")
+    .Attr("out_scale: int=0")
+    .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn)
+    .SetIsAggregate();
+
 REGISTER_OP("_ZenVitisAIConv2DWithoutBias")
     .Input("input: Tinput")
     .Input("filter: Tfilter")
@@ -1548,5 +1578,45 @@ REGISTER_OP("_ZenVitisAIConcatV2")
     .Attr("out_links: int")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::ConcatV2Shape);
+
+  REGISTER_OP("_ZenVitisAIResize")
+    .Input("images: T")
+    .Input("multiplier: int32")
+    .Output("resized_images: T")
+    .Attr("T: {quint8, qint8}")
+    .Attr("align_corners: bool = false")
+    .Attr("half_pixel_centers: bool = false")
+    .Attr("resize_algorithm: {'ResizeNearestNeighbor'}")
+    .Attr("reorder_before: bool")
+    .Attr("reorder_after: bool")
+    .Attr("in_links: int")
+    .Attr("out_links: int")
+    .Attr("reset: bool")
+    .SetShapeFn([](InferenceContext* c) {
+      ShapeHandle input;
+      ShapeHandle unused;
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 4, &input));
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(1), 2, &unused));
+      TF_RETURN_IF_ERROR(c->ReplaceDim(input, 1, c->UnknownDim(), &input));
+      TF_RETURN_IF_ERROR(c->ReplaceDim(input, 2, c->UnknownDim(), &input));
+      c->set_output(0, input);
+      return OkStatus();
+    });
+
+REGISTER_OP("_ZenVitisAIAddV2")
+    .Input("x: T")
+    .Input("y: T")
+    .Output("z: T")
+    .Attr("T: {qint8, quint8}")
+    .Attr("in_scale_0: int=0")
+    .Attr("in_scale_1: int=0")
+    .Attr("out_scale: int=0")
+    .Attr("reorder_before: bool")
+    .Attr("reorder_after: bool")
+    .Attr("in_links: int")
+    .Attr("out_links: int")
+    .Attr("reset: bool")
+    .SetShapeFn(shape_inference::BroadcastBinaryOpShapeFn)
+    .SetIsAggregate();
 
 }  // namespace tensorflow

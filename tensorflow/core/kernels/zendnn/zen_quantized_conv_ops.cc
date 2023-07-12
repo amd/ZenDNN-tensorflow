@@ -41,7 +41,7 @@ Status InitVitisAIConv2DParameters(OpKernelConstruction *context,
   params->explicit_paddings = conv2d_params_.explicit_paddings;
   TF_REQUIRES(
       params->data_format == FORMAT_NHWC,
-      errors::Unimplemented("ZenVitisAIConv2DOp only supports NHWC Format"));
+      errors::Unimplemented("_ZenVitisAIConv2DOp only supports NHWC Format"));
 
   // Initialize vitisai conv2d specific params. fp32 conv does not have scales
   ReadParameterFromContextIfAvailable<int>(context, "in_scale",
@@ -234,7 +234,8 @@ Status SetVitisAIConv2DAttributes(zendnn::primitive_attr *conv_attr,
   int modified_output_scale = params.output_scale;
 
   // Handling Asymetric Scaling: Sum nodes can have different scaling for
-  // different inputs |         |
+  // different inputs
+  // |         |
   //  \(x)    /(y)
   //   \     /
   //     Add
@@ -267,16 +268,19 @@ Status SetVitisAIConv2DAttributes(zendnn::primitive_attr *conv_attr,
   }
 
   // If relu_alpha is present, this means that it would be either ReLU6
-  // or LeakyRelu  (both will havealpha in float range).
-  // ReLU6:eltwise_bounded_relu. LeakyRelu: eltwise_relu
-  // alpha * (2 ^ output_scale) will be alpha for append_eltwise and
-  // will be upper bound for ReLU6 and negative slope for LeakyRelu
+  // or LeakyRelu
+  // ReLU6: eltwise_bounded_relu. LeakyRelu: eltwise_relu
+  // alpha * (2 ^ output_scale) will be upper bound for ReLU6
+  // since 6 is the upper bound in the float range
+  float relu_alpha = 1.0f;
   if (params.is_relu) {
     auto relu_algo = zendnn::algorithm::eltwise_relu;
     if (params.relu_alpha == 6) {  // ReLU6
       relu_algo = zendnn::algorithm::eltwise_bounded_relu;
+      relu_alpha = params.relu_alpha * std::pow(2, modified_output_scale);
+    } else if (params.relu_alpha < 1) {  // LeakyRely
+      relu_alpha = params.relu_alpha;
     }
-    float relu_alpha = params.relu_alpha * std::pow(2, modified_output_scale);
     post_ops.append_eltwise(downscale_scale, relu_algo, relu_alpha, 0.0f);
   } else if (downscale_scale != 1.0f) {
     post_ops.append_eltwise(downscale_scale, zendnn::algorithm::eltwise_linear,
@@ -410,7 +414,7 @@ class ZenVitisAIConv2DOp : public OpKernel {
     }
 
     zendnnInfo(ZENDNN_FWKLOG,
-               "ZenVitisAIConv2DOp:", " in_depth = ", dimensions.in_depth,
+               "_ZenVitisAIConv2DOp:", " in_depth = ", dimensions.in_depth,
                ", input_cols = ", dimensions.input_cols,
                ", input_rows = ", dimensions.input_rows,
                ", patch_depth = ", dimensions.patch_depth,
@@ -444,7 +448,7 @@ class ZenVitisAIConv2DOp : public OpKernel {
                         (context->expected_output_dtype(0) == DT_QINT8 ||
                          context->expected_output_dtype(0) == DT_QUINT8 ||
                          context->expected_output_dtype(0) == DT_FLOAT);
-    ZenMemoryPool<Toutput> *zenPoolBuffer=nullptr;
+    ZenMemoryPool<Toutput> *zenPoolBuffer = nullptr;
 
     Tensor *output = nullptr;
     if (!std::is_same<Tsum, void>::value) {
@@ -813,6 +817,7 @@ REGISTER_VITISAI_CONV2D_SUM(quint8, qint8, qint8);
 REGISTER_VITISAI_CONV2D_SUM(quint8, qint8, quint8);
 REGISTER_VITISAI_CONV2D_SUM(quint8, quint8, qint8);
 REGISTER_VITISAI_CONV2D_SUM(quint8, quint8, quint8);
+REGISTER_VITISAI_CONV2D_SUM(qint8, qint8, qint8);
 
 #undef REGISTER_VITISAI_CONV2D_SUM
 

@@ -221,12 +221,15 @@ class ZenLayoutRewritePass : public GraphOptimizationPass {
         {"VitisAIDepthwiseConv2D", "_ZenVitisAIDepthwiseConv2D",
          CheckValidityVitisAISupported, UpdateZenOpAttrsVitisAIConv2D});
     zen_rewrite_db_.push_back({"VitisAIConcatV2", "_ZenVitisAIConcatV2",
-                               CheckValidityQuantizedZenConcat,
-                               UpdateZenOpAttrs});
+                               RewriteValid, UpdateZenOpAttrs});
     zen_rewrite_db_.push_back({"VitisAIMaxPool", "_ZenVitisAIMaxPool",
                                RewriteValid, UpdateZenOpAttrs});
     zen_rewrite_db_.push_back({"VitisAIAvgPool", "_ZenVitisAIAvgPool",
                                RewriteValid, UpdateZenOpAttrs});
+    zen_rewrite_db_.push_back(
+        {"VitisAIResize", "_ZenVitisAIResize", RewriteValid, UpdateZenOpAttrs});
+    zen_rewrite_db_.push_back(
+        {"VitisAIAddV2", "_ZenVitisAIAddV2", RewriteValid, UpdateZenOpAttrs});
 
     // Quantization Specific Functions
     if (zendnn_getenv_int("ZENDNN_INT8_SUPPORT", 0) == 1) {

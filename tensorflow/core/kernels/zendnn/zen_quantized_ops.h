@@ -134,6 +134,21 @@ inline zendnn::memory::data_type DataTypetoZen() {
 }
 
 /**
+ * @brief Returns the default memory tag to be used
+ *
+ * @param ndims number of dimensions of the tensor
+ * @return zendnn::memory::format_tag
+ */
+inline zendnn::memory::format_tag GetDefaultTagForDim(int ndims) {
+  if (ndims == 1)
+    return zendnn::memory::format_tag::x;
+  else if (ndims == 2)
+    return zendnn::memory::format_tag::nc;
+  else if (ndims == 4)
+    return zendnn::memory::format_tag::nhwc;
+}
+
+/**
  * @brief Allocate and manage TF Persistent Tensor.
  *
  * @tparam T dtype of the Persistent Tensor
@@ -262,4 +277,4 @@ struct ZenPrimitives {
 
 }  // namespace tensorflow
 
-#endif TENSORFLOW_CORE_KERNELS_ZEN_QUANTIZED_OPS_H_
+#endif // TENSORFLOW_CORE_KERNELS_ZEN_QUANTIZED_OPS_H_

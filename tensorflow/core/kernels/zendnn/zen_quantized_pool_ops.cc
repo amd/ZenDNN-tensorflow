@@ -47,7 +47,7 @@ class ZenVitisAIPoolOp : public OpKernel {
     ReadParameterFromContext<Padding>(context, "padding", &padding_);
 
     // ZenDNN related params
-    InitZendnnParameters(context, &zendnn_params_);
+    OP_REQUIRES_OK(context, InitZendnnParameters(context, &zendnn_params_));
 
     // Only NHWC is allowed for VitisAI Ops
     OP_REQUIRES(context, FormatFromString(data_format, &data_format_),
@@ -86,7 +86,7 @@ class ZenVitisAIPoolOp : public OpKernel {
     };
     TensorShape out_shape;
     OP_REQUIRES_OK(context,
-		  params.forward_output_shape(&out_shape));
+                   params.forward_output_shape(&out_shape));
     Tensor *output = nullptr;
 
     // Update the output type

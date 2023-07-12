@@ -143,12 +143,17 @@ tf_zendnn_kernel_library(
     name = "zen_cwise_op",
     srcs = [
         "zen_cwise_ops_common.cc",
+        "zen_quantized_binary_ops.cc"
         ],
     hdrs = [
             "zen_cwise_ops_common.h",
+            "zen_quantized_ops.h"
             ],
     deps = MATH_DEPS + [
-	"//tensorflow/core/kernels:cwise_op",
+    "//tensorflow/core/kernels:no_op",
+    "//tensorflow/core/kernels:ops_util",
+    "//tensorflow/core/kernels:cwise_op",
+    "//tensorflow/core/kernels:fused_eigen_output_kernels"
     ] + zendnn_deps(),
 )
 
@@ -195,3 +200,17 @@ tf_zendnn_kernel_library(
             "//tensorflow/core/kernels:no_op",
            ] + zendnn_deps(),
 )
+
+tf_zendnn_kernel_library(
+    name = "zen_image_ops",
+    srcs = ["zen_quantized_resample_ops.cc"],
+    hdrs = [
+        "zen_quantized_ops.h"
+        ],
+    deps = NN_DEPS + [
+            "//tensorflow/core/kernels:no_op",
+            "//tensorflow/core:core_cpu",
+            "//tensorflow/core/kernels:fused_eigen_output_kernels"
+           ] + zendnn_deps(),
+)
+
