@@ -322,7 +322,8 @@ void zenGemmConvolution2D(void *input_array, int batch_size, int channels,
                           int stride_h, int stride_w, void *bias_array,
                           void *output_array, int out_height, int out_width,
                           bool reluFused, bool batchNormFused, bool addFused,
-                          void *bn_scale, void *bn_mean, void *bn_offset) {
+                          void *bn_scale, void *bn_mean, void *bn_offset,
+                          const float alpha) {
   // GEMM based convolution
   memory::dims src_dims = {batch_size, channels, height, width};
   memory::dims weights_dims = {output_channels, channels, kernel_h, kernel_w};
@@ -342,7 +343,7 @@ void zenGemmConvolution2D(void *input_array, int batch_size, int channels,
     conv_params.post_op_params.push_back({"sum", {1.0}});
   }
   if (reluFused) {
-    conv_params.post_op_params.push_back({"relu", {1.0, 0.0, 0.0}});
+    conv_params.post_op_params.push_back({"relu", {1.0, alpha, 0.0}});
   }
   if (batchNormFused) {
     conv_params.post_op_params.push_back({"batchnorm", {}});
@@ -1018,7 +1019,7 @@ void zenConvolution2DBatchNormOrRelu(
     void *batch_norm_mean, void *batch_norm_offset, void *elementwise_input,
     void *output_array, int out_height, int out_width, bool reluFused,
     bool batchNormFused, bool reorder_before, bool reorder_after,
-    void *cached_filter_data_, void *context) {
+    void *cached_filter_data_, void *context, const float alpha) {
   using tag = memory::format_tag;
   using dt = memory::data_type;
 
@@ -1209,7 +1210,7 @@ void zenConvolution2DBatchNormOrRelu(
                  output_channels, 0, 0, NULL, reluFused, false,
                  (const float *)batch_norm_scale, no_of_threads,
                  (const float *)batch_norm_offset,
-                 (const float *)batch_norm_mean, batch_size);
+                 (const float *)batch_norm_mean, batch_size, alpha);
 
       reorder(conv1_dst_memory, conv1_dst_memory_new)
           .execute(s, conv1_dst_memory, conv1_dst_memory_new);
@@ -1230,7 +1231,7 @@ void zenConvolution2DBatchNormOrRelu(
                      (const float *)elementwise_input_new, out_height,
                      out_width, output_channels, output_channels, biasOffset,
                      bias, reluFused, false, (const float *)batch_norm_scale,
-                     no_of_threads);
+                     no_of_threadsi, NULL, NULL, 1, alpha);
         }
       } else {
         zenPostOps(zenEnvObj, (float *)output_array,
@@ -1238,7 +1239,7 @@ void zenConvolution2DBatchNormOrRelu(
                    output_channels, 0, 0, NULL, reluFused, false,
                    (const float *)batch_norm_scale, no_of_threads,
                    (const float *)batch_norm_offset,
-                   (const float *)batch_norm_mean, batch_size);
+                   (const float *)batch_norm_mean, batch_size, alpha);
       }
     }
   } else {

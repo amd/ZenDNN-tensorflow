@@ -38,7 +38,7 @@ void zenConvolution2DBatchNormOrRelu(
     void *batch_norm_mean, void *batch_norm_offset, void *elementwise_input,
     void *output_array, int out_height, int out_width, bool reluFused,
     bool batchNormFused, bool reorder_before, bool reorder_after,
-    void *cached_filter_data_, void *context);
+    void *cached_filter_data_, void *context, const float alpha = 0.0f);
 #else
 #include "zendnn_helper.hpp"
 #endif

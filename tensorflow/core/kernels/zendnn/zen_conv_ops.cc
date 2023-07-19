@@ -39,7 +39,8 @@ void zenGemmConvolution2D(void *input_array, int batch_size, int channels,
                           int stride_h, int stride_w, void *bias_array,
                           void *output_array, int out_height, int out_width,
                           bool reluFused, bool batchNormFused, bool addFused,
-                          void *bn_scale, void *bn_mean, void *bn_offset);
+                          void *bn_scale, void *bn_mean, void *bn_offset,
+                          const float ops_alpha = 0.0f);
 template <typename T>
 void zenConvolution2DBiasOrRelu(
     zendnn::engine eng, zendnn::stream s, zendnn::primitive_attr conv_attr,

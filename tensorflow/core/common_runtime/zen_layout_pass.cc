@@ -448,9 +448,11 @@ class ZenLayoutRewritePass : public GraphOptimizationPass {
             fused_ops == std::vector<string>{"Relu"} ||
             fused_ops == std::vector<string>{"BiasAdd", "Relu"} ||
             fused_ops == std::vector<string>{"BiasAdd", "Relu6"} ||
+            fused_ops == std::vector<string>{"BiasAdd", "LeakyRelu"} ||
             fused_ops == std::vector<string>{"BiasAdd", "Add"} ||
             fused_ops == std::vector<string>{"BiasAdd", "Add", "Relu"} ||
-            fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"});
+            fused_ops == std::vector<string>{"FusedBatchNorm", "Relu"} ||
+            fused_ops == std::vector<string>{"FusedBatchNorm", "LeakyRelu"});
   }
 
   // Currently TF-ZenDNN supports FP32 inference only. Returns, true if node is
@@ -1402,6 +1404,7 @@ void ZenLayoutRewritePass::UpdateZenOpAttrsFusedConv2D(const Node *orig_node,
   DataType T;
   int num_args;
   float epsilon;
+  float leakyrelu_alpha;
   string data_format;
   string padding;
   std::vector<int32> strides;
@@ -1416,6 +1419,8 @@ void ZenLayoutRewritePass::UpdateZenOpAttrsFusedConv2D(const Node *orig_node,
   TF_CHECK_OK(GetNodeAttr(orig_node->def(), "data_format", &data_format));
   TF_CHECK_OK(GetNodeAttr(orig_node->def(), "dilations", &dilations));
   TF_CHECK_OK(GetNodeAttr(orig_node->def(), "epsilon", &epsilon));
+  TF_CHECK_OK(
+      GetNodeAttr(orig_node->def(), "leakyrelu_alpha", &leakyrelu_alpha));
 
   // 'padding_update' determines if padding attributes needs to be modified.
   bool padding_update = false;
@@ -1449,6 +1454,7 @@ void ZenLayoutRewritePass::UpdateZenOpAttrsFusedConv2D(const Node *orig_node,
   nb->Attr("data_format", data_format);
   nb->Attr("dilations", dilations);
   nb->Attr("epsilon", epsilon);
+  nb->Attr("leakyrelu_alpha", leakyrelu_alpha);
 }
 
 void ZenLayoutRewritePass::UpdateZenOpAttrsVitisAIConv2D(const Node *orig_node,
