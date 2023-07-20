@@ -1231,7 +1231,7 @@ void zenConvolution2DBatchNormOrRelu(
                      (const float *)elementwise_input_new, out_height,
                      out_width, output_channels, output_channels, biasOffset,
                      bias, reluFused, false, (const float *)batch_norm_scale,
-                     no_of_threadsi, NULL, NULL, 1, alpha);
+                     no_of_threads, NULL, NULL, 1, alpha);
         }
       } else {
         zenPostOps(zenEnvObj, (float *)output_array,
