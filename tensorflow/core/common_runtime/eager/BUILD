@@ -7,10 +7,16 @@ load(
     "tf_copts",
     "tf_cuda_library",
     "tf_mkl_kernel_library",
+    "tf_zendnn_kernel_library",
 )
 load(
     "//third_party/mkl:build_defs.bzl",
     "if_mkl",
+)
+
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "if_zendnn",
 )
 
 package(
@@ -532,7 +538,7 @@ cc_library(
             "//tensorflow/core/distributed_runtime/eager:remote_execute_node",
             "//tensorflow/core/distributed_runtime/eager:remote_copy_node",
         ],
-    }) + if_mkl([":mkl_eager_op_rewrite"]),
+    }) + if_zendnn([":zen_eager_op_rewrite"]) + if_mkl([":mkl_eager_op_rewrite"]),
 )
 
 tf_cc_test(
@@ -551,6 +557,19 @@ tf_cc_test(
         "//tensorflow/core:test_main",
         "@com_google_absl//absl/memory",
     ],
+)
+
+tf_zendnn_kernel_library(
+    name = "zen_eager_op_rewrite",
+    srcs = ["zen_eager_op_rewrite.cc"],
+    deps = [
+        ":eager_op_rewrite_registry",
+        "//tensorflow/core:all_kernels",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:graph",
+        "//tensorflow/core:lib",
+    ],
+    alwayslink = 1,
 )
 
 tf_mkl_kernel_library(

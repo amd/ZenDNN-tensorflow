@@ -7,6 +7,10 @@
 #
 #   The libraries in this package are not allowed to have ANY dependencies
 #   to any TensorFlow code outside this package.
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "zendnn_deps",
+)
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load(
     "//tensorflow/core/platform:build_config_root.bzl",
@@ -208,7 +212,7 @@ cc_library(
         ":logging",
         ":platform_port",
         "@com_google_absl//absl/base",
-    ],
+    ] + zendnn_deps(),
 )
 
 cc_library(

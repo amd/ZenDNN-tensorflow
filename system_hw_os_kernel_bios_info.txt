@@ -1,0 +1,83 @@
+Checking optional prerequisites
+lscpu is installed
+lscpu from util-linux 2.23.2
+lstopo-no-graphics is installed
+lstopo-no-graphics 1.11.8
+uname is installed
+uname (GNU coreutils) 8.22 Copyright (C) 2013 Free Software Foundation, Inc. License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>. This is free software: you are free to change and redistribute it. There is NO WARRANTY, to the extent permitted by law. Written by David MacKenzie.
+dmidecode is installed
+3.2
+
+
+HW Details:
+_SYSTEM_HW_ARCHITECTURE: x86_64
+_SYSTEM_HW_CPU_OP_MODE: 32-bit, 64-bit
+_SYSTEM_HW_BYTE_ORDER: Little Endian
+_SYSTEM_HW_ADDRS_SIZE: 
+_SYSTEM_HW_NUM_THREADS: 256
+_SYSTEM_HW_CPU_LIST: 0-255
+_SYSTEM_HW_THEARD_CORE (SMT): 2
+_SYSTEM_HW_CORES_SOCKET: 64
+_SYSTEM_HW_NUM_SOCKETS (1P/2P): 2
+_SYSTEM_HW_NUMA_NODE_SOCKET: 4
+_SYSTEM_HW_VENDOR_ID: 8
+_SYSTEM_HW_CPU_FAMILY: 25
+_SYSTEM_HW_MODEL: 1
+_SYSTEM_HW_MODEL_NAME: AMD EPYC 7763 64-Core Processor
+_SYSTEM_HW_STEPPING: 1
+_SYSTEM_HW_FREQ_BOOST: 
+_SYSTEM_HW_CPU_MHZ: 1796.336
+_SYSTEM_HW_CPU_MAX_MHZ: 
+_SYSTEM_HW_CPU_MIN_MHZ: 
+_SYSTEM_HW_BOGOMIPS: 4890.87
+_SYSTEM_HW_VIRTUALIZATION: AMD-V
+_SYSTEM_HW_L1D_CACHE_CORE: 32KB
+_SYSTEM_HW_L1I_CACHE_CORE: 32KB
+_SYSTEM_HW_L2_CACHE_CORE: 512KB
+_SYSTEM_HW_L3_CACHE_CCX_CCD: 32MB
+_SYSTEM_HW_FLAGS: sse sse2 ssse3 sse4_1 sse4_2 avx sse4a sse avx2
+This is Milan 7763
+_SYSTEM_HW_CORES_CCD: 8
+_SYSTEM_HW_EQUI_L3_CACHE_CORE: 4.00MB
+
+OS Details:
+_SYSTEM_OS_ID: "centos"
+_SYSTEM_OS_ID_LIKE: "rhel fedora"
+_SYSTEM_OS_VERSION: "7 (Core)"
+_SYSTEM_OS_VERSION_ID: "7"
+
+Kernel Details:
+_SYSTEM_KER_KERNEL_NAME: Linux
+_SYSTEM_KER_NODE_HOSTNAME: 4981d95eb3ac
+_SYSTEM_KER_KERNEL_REL: 5.4.0-153-generic
+_SYSTEM_KER_KERNEL_VER: #170-Ubuntu SMP Fri Jun 16 13:43:31 UTC 2023
+_SYSTEM_KER_MACHINE_HW_NAME: x86_64
+_SYSTEM_KER_OS_NAME: GNU/Linux
+
+Various tunable kernel parameters:
+transparent_hugepage: always [madvise] never
+numa_balancing_scan_delay_ms: 1000
+numa_balancing_scan_size_mb: 256
+numa_balancing_scan_period_min_ms: 1000
+sched_tunable_scaling: 1
+sched_rr_timeslice_ms: 100
+randomize_va_space: 2
+sched_min_granularity_ns: 3000000
+sched_wakeup_granularity_ns: 4000000
+sched_migration_cost_ns: 500000
+sched_nr_migrate: 32
+sched_rt_runtime_us: 950000
+sched_latency_ns: 24000000
+numa_balancing: 1
+transparent_hugepage_defrag: always defer defer+madvise [madvise] never
+dirty_expire_centisecs: 3000
+dirty_writeback_centisecs: 500
+sched_cfs_bandwidth_slice_us: 5000
+cpupower is not installed, cpupower frequency-info information not available
+tuned-adm is not installed, tuned-adm profile information not available
+
+BIOS Details:
+_SYSTEM_BIOS_VERSION: 
+_SYSTEM_BIOS_VENDOR: 
+_SYSTEM_BIOS_RELEASE_DATE: 
+_SYSTEM_BIOS_PROC_FAMILY: /opt/rh/devtoolset-9/root/usr/bin/sudo: line 41: /usr/bin/sudo: No such file or directory

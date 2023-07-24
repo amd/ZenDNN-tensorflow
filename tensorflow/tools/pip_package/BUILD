@@ -3,6 +3,7 @@
 
 load("//tensorflow:tensorflow.bzl", "filegroup_as_file", "if_windows", "transitive_hdrs")
 load("//third_party/mkl:build_defs.bzl", "if_enable_mkl", "if_mkl", "if_mkl_ml")
+load("//third_party/zen_dnn:build_defs.bzl", "if_zendnn")
 load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")
 load("@local_config_syslibs//:build_defs.bzl", "if_not_system_lib")
 load("//tensorflow/core/platform:build_config_root.bzl", "tf_additional_license_deps")
@@ -259,6 +260,8 @@ filegroup(
     }) + if_cuda([
         "@cub_archive//:LICENSE.TXT",
         "@local_config_nccl//:LICENSE",
+    ]) + if_zendnn([
+        "//third_party/zen_dnn:LICENSE",
     ]) + if_mkl([
         "//third_party/mkl_dnn:LICENSE",
     ]) + if_enable_mkl(["//third_party/mkl:LICENSE"]) + if_not_system_lib(

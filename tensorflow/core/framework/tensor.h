@@ -693,6 +693,8 @@ class Tensor {
   friend class VariableOp;            // For access to set_shape.
   friend class AutoReloadVariableOp;  // For access to set_shape.
   friend class TensorTestHelper;      // For access to set_shape.
+  friend class ZenMemoryPool;         // For access to set_shape.
+  friend class ZenQuantizedMemoryPool;// For access to set_shape.
   friend class CastOpBase;            // For access to set_dtype.
   friend class ScopedAllocator;       // For access to buf_.
   friend Status batch_util::CopyElementToSlice(

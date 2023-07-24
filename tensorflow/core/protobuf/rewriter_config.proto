@@ -118,6 +118,9 @@ message RewriterConfig {
   // Note that this can change the numerical stability of the graph.
   // Note: this is equivalent to the deprecated option auto_mixed_precision_mkl
   Toggle auto_mixed_precision_onednn_bfloat16 = 31;
+  // Numbers between 10 and 31 are already used, hence we used number 32.
+  // This number should be unique.
+  Toggle auto_mixed_precision_zen = 32;
   // Emulate a model using data type float16 on CPU (default is OFF).
   // This will try to emulate the float16 inputs and outputs of an operator
   // on CPU to have better correlation with float16 on GPU; however the

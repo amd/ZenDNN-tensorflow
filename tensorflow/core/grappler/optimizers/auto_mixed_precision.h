@@ -26,7 +26,7 @@ namespace grappler {
 // CUDA: convert to float16 on GPU
 // BF16: convert to bfloat16 on CPU
 // CPU: emulate float16 on CPU without changing operator kernel
-enum class AutoMixedPrecisionMode { CUDA, BF16, CPU };
+enum class AutoMixedPrecisionMode { CUDA, BF16, CPU, ZEN };
 
 // Convert data types to float16 or bfloat16 where appropriate to improve
 // performance on GPUs or CPUs.
@@ -49,6 +49,8 @@ class AutoMixedPrecision : public GraphOptimizer {
         return "auto_mixed_precision_onednn_bfloat16";
       case AutoMixedPrecisionMode::CPU:
         return "auto_mixed_precision_cpu";
+      case AutoMixedPrecisionMode::ZEN:
+        return "auto_mixed_precision_zen";
       default:
         LOG(FATAL) << "Invalid value for AutoMixedPrecisionMode: "  // Crash Ok
                    << static_cast<int>(mode_);

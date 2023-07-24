@@ -25,6 +25,9 @@ limitations under the License.
 #include "tensorflow/core/platform/byte_order.h"
 #include "tensorflow/core/platform/cpu_info.h"
 #include "tensorflow/core/platform/logging.h"
+#include "zendnn_helper.hpp"
+
+using namespace zendnn;
 
 namespace tensorflow {
 namespace port {
@@ -190,8 +193,11 @@ void InfoAboutUnusedCPUFeatures() {
 #endif  // __FMA__
 #endif  // else of if defined(_MSC_VER) && !defined(__clang__)
     if (!missing_instructions.empty()) {
+      zendnnEnv zenEnvObj = readEnv();
       LOG(INFO) << "This TensorFlow binary is optimized with "
-                << "oneAPI Deep Neural Network Library (oneDNN) "
+                << (zenEnvObj.zenEnableTFOpts
+                        ? "Zen Deep Neural Network Library (ZenDNN) "
+                        : "oneAPI Deep Neural Network Library (oneDNN) ")
                 << "to use the following CPU instructions in performance-"
                 << "critical operations: " << missing_instructions << std::endl
                 << "To enable them in other operations, rebuild TensorFlow "

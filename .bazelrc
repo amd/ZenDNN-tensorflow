@@ -50,6 +50,7 @@
 #     cuda:         Build with full cuda support.
 #     rocm:         Build with AMD GPU support (rocm).
 #     mkl:          Enable full mkl support.
+#     zendnn:       Build with AMD CPU Support (zendnn).
 #     tensorrt:     Enable Tensorrt support.
 #     numa:         Enable numa using hwloc.
 #     noaws:        Disable AWS S3 storage support
@@ -210,6 +211,14 @@ build:ios_fat --ios_multi_cpus=armv7,arm64,i386,x86_64
 # //tensorflow:libtensorflow_framework.so.
 build:monolithic --define framework_shared_object=false
 build:monolithic --experimental_link_static_libraries_once=false  # b/229868128
+
+# Please note that ZenDNN on MacOS or windows is still not supported.
+# If you would like to use a local ZenDNN instead of downloading, please set the
+# environment variable "TF_GIT_ROOT" and "ZENDNN_GIT_ROOT" every time before build.
+build:zendnn --define=build_with_zendnn=true --define=enable_zendnn=true
+build:zendnn --define=tensorflow_zendnn_contraction_kernel=0
+build:zendnn --define=build_with_openmp=true
+build:zendnn -c opt
 
 # Please note that MKL on MacOS or windows is still not supported.
 # If you would like to use a local MKL instead of downloading, please set the

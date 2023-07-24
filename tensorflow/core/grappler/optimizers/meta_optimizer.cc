@@ -236,6 +236,8 @@ std::unique_ptr<GraphOptimizer> MetaOptimizer::MakeNewOptimizer(
            new AutoMixedPrecision(AutoMixedPrecisionMode::BF16));
   }
 #endif
+  MK_OPT("auto_mixed_precision_zen", "auto_mixed_precision_zen",
+         new AutoMixedPrecision(AutoMixedPrecisionMode::ZEN));
   MK_OPT("auto_mixed_precision_cpu", "auto_mixed_precision_cpu",
          new AutoMixedPrecision(AutoMixedPrecisionMode::CPU));
   MK_OPT("memory", "memory_optimization",
@@ -392,6 +394,12 @@ Status MetaOptimizer::InitializeOptimizers(
         MakeUnique<AutoMixedPrecision>(AutoMixedPrecisionMode::BF16));
   }
 #endif
+  if (AutoMixedPrecisionEnabled(cfg_.auto_mixed_precision_zen()) &&
+      AutoMixedPrecisionEnabled(
+          plugin_configs.toggle_config["auto_mixed_precision_zen"])) {
+    optimizers->push_back(
+        MakeUnique<AutoMixedPrecision>(AutoMixedPrecisionMode::ZEN));
+  }
   if (AutoMixedPrecisionEnabled(cfg_.auto_mixed_precision_cpu()) &&
       AutoMixedPrecisionEnabled(
           plugin_configs.toggle_config["auto_mixed_precision_cpu"])) {
@@ -643,6 +651,10 @@ void MetaOptimizer::PrintUserAndPluginConfigs(
         AutoMixedPrecisionEnabled(cfg_.auto_mixed_precision_mkl())
             ? RewriterConfig::ON
             : RewriterConfig::OFF;
+    user_cfg.toggle_config["auto_mixed_precision_zen"] =
+        AutoMixedPrecisionEnabled(cfg_.auto_mixed_precision_zen())
+            ? RewriterConfig::ON
+            : RewriterConfig::OFF;
     user_cfg.toggle_config["auto_mixed_precision_cpu"] =
         AutoMixedPrecisionEnabled(cfg_.auto_mixed_precision_cpu())
             ? RewriterConfig::ON
@@ -676,6 +688,7 @@ void MetaOptimizer::PrintUserAndPluginConfigs(
       PRINT_CFG("auto_mixed_precision_onednn_bfloat16",
                 "auto_mixed_precision_onednn_bfloat16")
       PRINT_CFG("auto_mixed_precision_mkl", "auto_mixed_precision_mkl")
+      PRINT_CFG("auto_mixed_precision_zen", "auto_mixed_precision_zen")
       PRINT_CFG("auto_mixed_precision_cpu", "auto_mixed_precision_cpu")
       PRINT_CFG("pin_to_host", "pin_to_host_optimization")
       PRINT_CFG("layout", "layout_optimizer")
@@ -717,6 +730,7 @@ void MetaOptimizer::PrintUserAndPluginConfigs(
         pair.first == "auto_mixed_precision" ||
         pair.first == "auto_mixed_precision_onednn_bfloat16" ||
         pair.first == "auto_mixed_precision_mkl" ||
+        pair.first == "auto_mixed_precision_zen" ||
         pair.first == "auto_mixed_precision_cpu" ||
         pair.first == "pin_to_host_optimization" ||
         pair.first == "scoped_allocator_optimization") {
@@ -1349,6 +1363,7 @@ bool MetaOptimizerEnabled(const ConfigProto& cfg) {
          AutoMixedPrecisionEnabled(
              rewrite_cfg.auto_mixed_precision_onednn_bfloat16()) ||
          AutoMixedPrecisionEnabled(rewrite_cfg.auto_mixed_precision_mkl()) ||
+         AutoMixedPrecisionEnabled(rewrite_cfg.auto_mixed_precision_zen()) ||
          AutoMixedPrecisionEnabled(rewrite_cfg.auto_mixed_precision_cpu()) ||
          !rewrite_cfg.optimizers().empty() ||
          !rewrite_cfg.custom_optimizers().empty();

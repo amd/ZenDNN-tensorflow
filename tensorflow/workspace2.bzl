@@ -174,6 +174,39 @@ def _tf_repositories():
     )
 
     tf_http_archive(
+        name = "amd_libm",
+        build_file = "//third_party/amd_libm:libm.BUILD",
+        sha256 = "906391b8e35d95ff37f7bda7bbef3864609b58213e52aacf687a91bebcd617c0",
+        strip_prefix = "aocl-libm-ose-aocl-3.1",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip",
+            "https://github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip",
+        ],
+    )
+
+    tf_http_archive(
+        name = "amd_blis",
+        build_file = "//third_party/amd_blis:blis.BUILD",
+        sha256 = "cddd31176834a932753ac0fc4c76332868feab3e9ac607fa197d8b44c1e74a41",
+        strip_prefix = "blis-4.0",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/blis/archive/refs/tags/4.0.tar.gz",
+            "https://github.com/amd/blis/archive/refs/tags/4.0.tar.gz",
+        ],
+    )
+
+    tf_http_archive(
+        name = "zen_dnn",
+        build_file = "//third_party/zen_dnn:zendnn.BUILD",
+        sha256 = "702d34f1783d1ed97c55a2d46109fa8a6caf59b482c870715db8def6a73114fa",
+        strip_prefix = "ZenDNN-4.0",
+        urls = [
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz",
+            "https://github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz",
+        ],
+    )
+
+    tf_http_archive(
         name = "mkl_dnn",
         build_file = "//third_party/mkl_dnn:mkldnn.BUILD",
         sha256 = "a0211aeb5e7dad50b97fa5dffc1a2fe2fe732572d4164e1ee8750a2ede43fbec",

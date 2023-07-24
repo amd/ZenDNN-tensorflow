@@ -38,6 +38,10 @@ load(
     "if_mkl_ml",
 )
 load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "if_zendnn",
+)
+load(
     "//third_party/mkl_dnn:build_defs.bzl",
     "if_mkldnn_aarch64_acl",
     "if_mkldnn_aarch64_acl_openmp",
@@ -405,6 +409,9 @@ def tf_copts(
         # optimizations for Intel builds using oneDNN if configured
         if_enable_mkl(["-DENABLE_MKL"]) +
         if_mkldnn_openmp(["-DENABLE_ONEDNN_OPENMP"]) +
+        # Enable additional ops (e.g., ops with non-NHWC data layout) and
+        # optimizations for AMD builds using ZenDNN if configured.
+        if_zendnn(["-DAMD_ZENDNN"]) +
         if_mkldnn_aarch64_acl(["-DDNNL_AARCH64_USE_ACL=1"]) +
         if_mkldnn_aarch64_acl_openmp(["-DENABLE_ONEDNN_OPENMP"]) +
         if_enable_acl(["-DXLA_CPU_USE_ACL=1", "-fexceptions"]) +
@@ -1895,6 +1902,46 @@ def tf_mkl_kernel_library(
         hdrs = hdrs,
         deps = deps,
         linkopts = linkopts,
+        alwayslink = alwayslink,
+        copts = copts + if_override_eigen_strong_inline(["/DEIGEN_STRONG_INLINE=inline"]),
+        features = disable_header_modules,
+    )
+
+def tf_zendnn_kernel_library(
+        name,
+        prefix = None,
+        srcs = None,
+        hdrs = None,
+        deps = None,
+        alwayslink = 1,
+        # Adding an explicit `-fexceptions` because `allow_exceptions = True`
+        # in `tf_copts` doesn't work internally.
+        copts = tf_copts() + ["-fexceptions"] + ["-fopenmp"] +  tf_openmp_copts()):
+    """A rule to build ZenDNN-based TensorFlow kernel libraries."""
+
+    if not bool(srcs):
+        srcs = []
+    if not bool(hdrs):
+        hdrs = []
+
+    if prefix:
+        srcs = srcs + native.glob(
+            [prefix + "*.cc"],
+            exclude = [prefix + "*test*"],
+        )
+        hdrs = hdrs + native.glob(
+            [prefix + "*.h"],
+            exclude = [prefix + "*test*"],
+        )
+
+    # -fno-exceptions in nocopts breaks compilation if header modules are enabled.
+    disable_header_modules = ["-use_header_modules"]
+
+    cc_library(
+        name = name,
+        srcs = if_zendnn(srcs),
+        hdrs = hdrs,
+        deps = deps,
         alwayslink = alwayslink,
         copts = copts + if_override_eigen_strong_inline(["/DEIGEN_STRONG_INLINE=inline"]),
         features = disable_header_modules,

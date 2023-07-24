@@ -264,9 +264,9 @@ class MklCPUAllocatorFactory : public AllocatorFactory {
   }
 };
 
-REGISTER_MEM_ALLOCATOR("MklCPUAllocator", (IsMKLEnabled() ? 200 : 50),
+REGISTER_MEM_ALLOCATOR("MklCPUAllocator",
+                       (IsZenDnnEnabled() ? 50 : (IsMKLEnabled() ? 200 : 50)),
                        MklCPUAllocatorFactory);
-
 }  // namespace
 #endif  // INTEL_MKL
 

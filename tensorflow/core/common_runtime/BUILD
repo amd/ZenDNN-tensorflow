@@ -43,6 +43,14 @@ load(
     "if_mkl",
     "if_mkl_ml",
 )
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "if_zendnn"
+)
+load(
+    "//third_party/zen_dnn:build_defs.bzl",
+    "zendnn_deps",
+)
 
 default_package_visibility = [
     "//tensorflow:internal",
@@ -279,6 +287,7 @@ filegroup(
         "memory_types.h",
         "mkl_cpu_allocator.h",
         "mkl_layout_pass.h",
+        "zen_layout_pass.h",
         "mkl_tfconversion_pass.h",
         "node_file_writer.h",
         "optimization_registry.h",
@@ -1245,6 +1254,27 @@ cc_library(
 )
 
 cc_library(
+    name = "zen_layout_pass",
+    srcs = ["zen_layout_pass.cc"],
+    hdrs = [
+        "zen_layout_pass.h",
+    ],
+    copts = tf_copts() + ["-fopenmp"],
+    deps = [
+        ":function",
+        ":optimization_registry",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:framework_internal",
+        "//tensorflow/core:graph",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:lib_internal",
+        "//tensorflow/core:protos_all_cc",
+        "@com_google_absl//absl/base",
+        ] + zendnn_deps(),
+    alwayslink = 1,
+)
+
+cc_library(
     name = "mkl_tfconversion_pass",
     srcs = ["mkl_tfconversion_pass.cc"],
     hdrs = [
@@ -1818,6 +1848,7 @@ tf_cuda_library(
         ":memory_types",
         ":mkl_cpu_allocator",
         ":mkl_layout_pass",
+        ":zen_layout_pass",
         ":mkl_tfconversion_pass",
         ":optimization_registry",
         ":parallel_concat_optimizer",
