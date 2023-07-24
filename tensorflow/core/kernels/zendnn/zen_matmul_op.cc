@@ -127,18 +127,18 @@ class ZenMatMulOp : public OpKernel {
 
     // dimensions of matmul source, weights, bias and destination tensors
     memory::dims src_dims = {m, k};
-    memory::dims weight_dims = {n, k};
-    memory::dims bias_dims = {n};
+    memory::dims weight_dims = {k, n};
+    memory::dims bias_dims = {1, n};
     memory::dims dst_dims = {m, n};
     memory::format_tag src_format = memory::format_tag::nc;
     memory::format_tag weight_format =
-        transpose_b ? memory::format_tag::oi : memory::format_tag::io;
+        transpose_b ? memory::format_tag::io : memory::format_tag::oi;
 
     ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims, dst_dims,
                                   src_format, weight_format);
 
     ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
-        ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 0);
+        ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
 
     if (isBiasAddGelu) {
       const Tensor &bias = ctx->input(2);

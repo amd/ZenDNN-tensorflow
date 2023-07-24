@@ -63,6 +63,7 @@ struct LaunchZenFusedMatMulOp<CPUDevice, T> {
     const int n = b.dim_size(1 - dim_pair[0].second);
     bool transpose_a = dim_pair[0].first == 0;
     bool transpose_b = dim_pair[0].second == 1;
+    bool isBiasAdd = true;
 
     auto a_ptr = const_cast<float *>(a.template flat<T>().data());
     auto b_ptr = const_cast<float *>(b.template flat<T>().data());
@@ -71,35 +72,35 @@ struct LaunchZenFusedMatMulOp<CPUDevice, T> {
 
     // dimensions of matmul source, weights, bias and destination tensors
     memory::dims src_dims = {m, k};
-    memory::dims weight_dims = {n, k};
-    memory::dims bias_dims = {n};
+    memory::dims weight_dims = {k, n};
+    memory::dims bias_dims = {1, n};
     memory::dims dst_dims = {m, n};
     memory::format_tag src_format = memory::format_tag::nc;
     memory::format_tag weight_format =
-        transpose_b ? memory::format_tag::oi : memory::format_tag::io;
+        transpose_b ? memory::format_tag::io : memory::format_tag::oi;
 
     ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims, dst_dims,
-                                  src_format, weight_format);
+                                  src_format, weight_format, isBiasAdd);
 
     switch (fusion) {
       case FusedComputationType::kBiasAdd: {
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 0);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAdd);
         break;
       }
       case FusedComputationType::kBiasAddWithAdd: {
         matmul_params.post_op_params.push_back({"sum", {1.0}});
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAdd);
         break;
       }
       case FusedComputationType::kBiasAddWithRelu: {
         matmul_params.post_op_params.push_back({"relu", {1.0, 0.0, 0.0}});
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 0);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAdd);
         break;
       }
       case FusedComputationType::kBiasAddWithAddAndRelu: {
@@ -107,7 +108,7 @@ struct LaunchZenFusedMatMulOp<CPUDevice, T> {
         matmul_params.post_op_params.push_back({"relu", {1.0, 0.0, 0.0}});
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAdd);
         break;
       }
       case FusedComputationType::kBiasAddWithGeluApproximate: {
@@ -115,14 +116,14 @@ struct LaunchZenFusedMatMulOp<CPUDevice, T> {
             {"GeluApproximate", {1.0, 1.0, 0.0}});
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAdd);
         break;
       }
       case FusedComputationType::kBiasAddWithGeluExact: {
         matmul_params.post_op_params.push_back({"GeluExact", {1.0, 1.0, 0.0}});
         ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
             ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+        matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAdd);
         break;
       }
       case FusedComputationType::kBiasAddWithRelu6:
