@@ -113,11 +113,12 @@ struct ZenEinsumHelper {
             ctx, &out, output_shape, out_links, reset, out_type, out_index);
         if (status) {
           zenEnableMemPool = false;
+        } else {
+          *output = *out;
         }
       } else {
         zenEnableMemPool = false;
       }
-      *output = *out;
     }
     if (!zenEnableMemPool) {
       TF_RETURN_IF_ERROR(
