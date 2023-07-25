@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -102,13 +102,11 @@ class ZenMatMulPrimitive : public ZenPrimitive {
     // Reset data handle back
     context_.src_mem->set_data_handle(DummyData);
     context_.weight_mem->set_data_handle(DummyData);
-    if (isBiasAdd)
-      context_.bias_mem->set_data_handle(DummyData);
+    if (isBiasAdd) context_.bias_mem->set_data_handle(DummyData);
     context_.dst_mem->set_data_handle(DummyData);
   }
 
-  std::shared_ptr<matmul::primitive_desc> GetPrimitiveDesc()
-      const {
+  std::shared_ptr<matmul::primitive_desc> GetPrimitiveDesc() const {
     return context_.matmul_pd;
   }
 
@@ -153,23 +151,21 @@ class ZenMatMulPrimitive : public ZenPrimitive {
 
   void Setup(const ZenMatMulParams &matmul_params) {
     // Create memory descriptors
-    context_.src_md.reset(new memory::desc({matmul_params.src_dims},
-                                           memory::data_type::f32,
+    using dt = memory::data_type;
+    auto dtype = std::is_same<Tinput, float>::value ? dt::f32 : dt::bf16;
+    context_.src_md.reset(new memory::desc({matmul_params.src_dims}, dtype,
                                            matmul_params.src_format));
-    context_.weight_md.reset(new memory::desc({matmul_params.weight_dims},
-                                              memory::data_type::f32,
-                                              matmul_params.weight_format));
-    context_.dst_md.reset(new memory::desc({matmul_params.dst_dims},
-                                           memory::data_type::f32,
+    context_.weight_md.reset(new memory::desc(
+        {matmul_params.weight_dims}, dtype, matmul_params.weight_format));
+    context_.dst_md.reset(new memory::desc({matmul_params.dst_dims}, dtype,
                                            memory::format_tag::nc));
     if (matmul_params.isBiasAdd) {
-      context_.bias_md.reset(new memory::desc({matmul_params.bias_dims},
-                                              memory::data_type::f32,
+      context_.bias_md.reset(new memory::desc({matmul_params.bias_dims}, dtype,
                                               memory::format_tag::nc));
-    // Create descriptor for matmul
-      context_.matmul_desc.reset(new matmul::desc(
-          *context_.src_md, *context_.weight_md,
-          *context_.bias_md, *context_.dst_md));
+      // Create descriptor for matmul
+      context_.matmul_desc.reset(
+          new matmul::desc(*context_.src_md, *context_.weight_md,
+                           *context_.bias_md, *context_.dst_md));
     } else {
       context_.matmul_desc.reset(new matmul::desc(
           *context_.src_md, *context_.weight_md, *context_.dst_md));
@@ -211,8 +207,8 @@ class ZenMatMulPrimitive : public ZenPrimitive {
       context_.matmul_pd.reset(new matmul::primitive_desc(
           *context_.matmul_desc, post_ops_attr, cpu_engine_));
     } else {
-      context_.matmul_pd.reset(new matmul::primitive_desc(
-          *context_.matmul_desc, cpu_engine_));
+      context_.matmul_pd.reset(
+          new matmul::primitive_desc(*context_.matmul_desc, cpu_engine_));
     }
 
     // Create memory primitive based on dummy data

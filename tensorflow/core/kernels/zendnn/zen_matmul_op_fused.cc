@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -65,10 +65,10 @@ struct LaunchZenFusedMatMulOp<CPUDevice, T> {
     bool transpose_b = dim_pair[0].second == 1;
     bool isBiasAdd = true;
 
-    auto a_ptr = const_cast<float *>(a.template flat<T>().data());
-    auto b_ptr = const_cast<float *>(b.template flat<T>().data());
+    auto a_ptr = const_cast<T *>(a.template flat<T>().data());
+    auto b_ptr = const_cast<T *>(b.template flat<T>().data());
     auto c_ptr = (output->template flat<T>().data());
-    auto bias_ptr = const_cast<float *>(bias_add_args.bias_add_data);
+    auto bias_ptr = const_cast<T *>(bias_add_args.bias_add_data);
 
     // dimensions of matmul source, weights, bias and destination tensors
     memory::dims src_dims = {m, k};
@@ -199,12 +199,15 @@ class ZenFusedMatMulOp : public OpKernel {
     TensorShape out_shape(
         {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)});
     // Update the output type
-    zenTensorType out_type = zenTensorType::FLOAT;
+    bool is_float = std::is_same<T, float>::value;
+    zenTensorType out_type =
+        (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
 
     zendnnEnv zenEnvObj = readEnv();
     Tensor *out = nullptr;
-    int zenEnableMemPool =
-        zenEnvObj.zenEnableMemPool && ctx->expected_output_dtype(0) == DT_FLOAT;
+    int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
+                           (ctx->expected_output_dtype(0) == DT_FLOAT ||
+                            ctx->expected_output_dtype(0) == DT_BFLOAT16);
     ZenMemoryPool<T> *zenPoolBuffer = NULL;
 
     if ((fused_computation_ == FusedComputationType::kBiasAddWithAdd) ||
@@ -216,10 +219,9 @@ class ZenFusedMatMulOp : public OpKernel {
         unsigned int threadID = getZenTFthreadId(std::this_thread::get_id());
         zenPoolBuffer = ZenMemoryPool<T>::getZenMemPool(threadID);
         if (zenPoolBuffer) {
-          const float *output_array =
-              const_cast<float *>(out->flat<T>().data());
-          zenPoolBuffer->zenMemPoolUpdateTensorPtrStatus(
-              ctx, (float *)output_array, out_links, reset);
+          const T *output_array = const_cast<T *>(out->flat<T>().data());
+          zenPoolBuffer->zenMemPoolUpdateTensorPtrStatus(ctx, (T *)output_array,
+                                                         out_links, reset);
         }
       }
     } else {
@@ -269,8 +271,8 @@ class ZenFusedMatMulOp : public OpKernel {
     // If ZenMemPool Optimization is enabled(default), update the state of
     //  Memory pool based on input_array address
     if (zenEnvObj.zenEnableMemPool && zenPoolBuffer) {
-      auto a_ptr = const_cast<float *>(a.template flat<T>().data());
-      auto b_ptr = const_cast<float *>(b.template flat<T>().data());
+      auto a_ptr = const_cast<T *>(a.template flat<T>().data());
+      auto b_ptr = const_cast<T *>(b.template flat<T>().data());
       zenPoolBuffer->zenMemPoolFree(ctx, a_ptr);
       zenPoolBuffer->zenMemPoolFree(ctx, b_ptr);
     }
@@ -295,6 +297,7 @@ class ZenFusedMatMulOp : public OpKernel {
       ZenFusedMatMulOp<CPUDevice, T>);
 
 TF_CALL_float(REGISTER_ZEN_FUSED_CPU_MATMUL);
+TF_CALL_bfloat16(REGISTER_ZEN_FUSED_CPU_MATMUL);
 
 #undef REGISTER_FUSED_CPU_MATMUL
 

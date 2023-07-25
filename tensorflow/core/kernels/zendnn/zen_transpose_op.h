@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -23,6 +23,7 @@ limitations under the License.
 
 namespace tensorflow {
 
+template <typename T>
 class ZenTransposeOp : public OpKernel {
  public:
   bool reorder_before, reorder_after, reset;
@@ -43,10 +44,11 @@ class ZenTransposeOp : public OpKernel {
                              gtl::ArraySlice<int32> perm, Tensor *out) = 0;
   virtual bool IsConjugate() const { return false; }
 };
-
-class ZenTransposeCpuOp : public ZenTransposeOp {
+template <typename T>
+class ZenTransposeCpuOp : public ZenTransposeOp<T> {
  public:
-  explicit ZenTransposeCpuOp(OpKernelConstruction *ctx) : ZenTransposeOp(ctx) {}
+  explicit ZenTransposeCpuOp(OpKernelConstruction *ctx)
+      : ZenTransposeOp<T>(ctx) {}
 
  protected:
   Status DoTranspose(OpKernelContext *ctx, const Tensor &in,
@@ -54,10 +56,11 @@ class ZenTransposeCpuOp : public ZenTransposeOp {
 };
 
 // Conjugating transpose ops.
-class ConjugateZenTransposeCpuOp : public ZenTransposeOp {
+template <typename T>
+class ConjugateZenTransposeCpuOp : public ZenTransposeOp<T> {
  public:
-  explicit ConjugateZenTransposeCpuOp(OpKernelConstruction *ctx)
-      : ZenTransposeOp(ctx) {}
+  explicit ConjugateZenTransposeCpuOp<T>(OpKernelConstruction *ctx)
+      : ZenTransposeOp<T>(ctx) {}
 
  protected:
   Status DoTranspose(OpKernelContext *ctx, const Tensor &in,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -222,194 +222,331 @@ class ZenBatchMatMul : public OpKernel {
   void Compute(OpKernelContext *ctx) override {
     const Tensor &lhs = ctx->input(0);
     const Tensor &rhs = ctx->input(1);
+    bool is_float = std::is_same<Scalar, float>::value;
+    if (is_float) {
+      if (!v2_bcast) {
+        // Using V1, so check to make sure lhs and rhs dimensions are correct
+        // and no broadcasting is needed.
+        OP_REQUIRES(ctx, lhs.dims() == rhs.dims(),
+                    errors::InvalidArgument("lhs and rhs has different ndims: ",
+                                            lhs.shape().DebugString(), " vs. ",
+                                            rhs.shape().DebugString()));
+        const int ndims = lhs.dims();
+        OP_REQUIRES(
+            ctx, ndims >= 2,
+            errors::InvalidArgument("lhs and rhs ndims must be >= 2: ", ndims));
+        for (int i = 0; i < ndims - 2; ++i) {
+          OP_REQUIRES(ctx, lhs.dim_size(i) == rhs.dim_size(i),
+                      errors::InvalidArgument(
+                          "lhs.dim(", i, ") and rhs.dim(", i,
+                          ") must be the same: ", lhs.shape().DebugString(),
+                          " vs ", rhs.shape().DebugString()));
+        }
+      } else {
+        OP_REQUIRES(
+            ctx, lhs.dims() >= 2,
+            errors::InvalidArgument("In[0] ndims must be >= 2: ", lhs.dims()));
+        OP_REQUIRES(
+            ctx, rhs.dims() >= 2,
+            errors::InvalidArgument("In[1] ndims must be >= 2: ", rhs.dims()));
+      }
 
-    if (!v2_bcast) {
-      // Using V1, so check to make sure lhs and rhs dimensions are correct and
-      // no broadcasting is needed.
-      OP_REQUIRES(ctx, lhs.dims() == rhs.dims(),
-                  errors::InvalidArgument("lhs and rhs has different ndims: ",
-                                          lhs.shape().DebugString(), " vs. ",
-                                          rhs.shape().DebugString()));
-      const int ndims = lhs.dims();
+      // lhs and rhs can have different dimensions
+      const int ndims_lhs = lhs.dims();
+      const int ndims_rhs = rhs.dims();
+
+      // Get broadcast info
+      MatMulBCast bcast(lhs.shape().dim_sizes(), rhs.shape().dim_sizes());
       OP_REQUIRES(
-          ctx, ndims >= 2,
-          errors::InvalidArgument("lhs and rhs ndims must be >= 2: ", ndims));
-      for (int i = 0; i < ndims - 2; ++i) {
-        OP_REQUIRES(ctx, lhs.dim_size(i) == rhs.dim_size(i),
+          ctx, bcast.IsValid(),
+          errors::InvalidArgument(
+              "In[0] and In[1] must have compatible batch dimensions: ",
+              lhs.shape().DebugString(), " vs. ", rhs.shape().DebugString()));
+
+      TensorShape out_shape = bcast.output_batch_shape();
+      auto batch_size = bcast.output_batch_size();
+
+      auto lhs_rows = lhs.dim_size(ndims_lhs - 2);
+      auto lhs_cols = lhs.dim_size(ndims_lhs - 1);
+      auto rhs_rows = rhs.dim_size(ndims_rhs - 2);
+      auto rhs_cols = rhs.dim_size(ndims_rhs - 1);
+
+      // TF-vanilla path will override lhs_reshaped and rhs_reshaped
+      auto rhs_reshaped = rhs.template flat_inner_dims<float, 3>();
+      auto lhs_reshaped = lhs.template flat_inner_dims<float, 3>();
+
+      const uint64 M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
+      const uint64 K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
+      const uint64 N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+
+      // Switch for TF-vanilla and TF-zendnn
+      // When M and N <= 64 TF-Vanilla path(Eigen implementation)
+      //  is optimal for batched GEMM execution
+      // ZenDNN kernel works well beyond above M and N values
+      int switch_vanilla = (M <= 64) && (N <= 64);
+
+      if (switch_vanilla) {
+        Tensor lhs_reshaped;
+        OP_REQUIRES(
+            ctx,
+            lhs_reshaped.CopyFrom(
+                lhs, TensorShape({bcast.x_batch_size(), lhs_rows, lhs_cols})),
+            errors::Internal("Failed to reshape In[0] from ",
+                             lhs.shape().DebugString()));
+        Tensor rhs_reshaped;
+        OP_REQUIRES(
+            ctx,
+            rhs_reshaped.CopyFrom(
+                rhs, TensorShape({bcast.y_batch_size(), rhs_rows, rhs_cols})),
+            errors::Internal("Failed to reshape In[1] from ",
+                             rhs.shape().DebugString()));
+        // We need to reshape lhs and rhs before swapping their
+        // rows and cols while reshapping (lhs and rhs) is not
+        // needed in case of zendnn computation path.
+        if (adj_x_) {
+          std::swap(lhs_rows, lhs_cols);
+        }
+        if (adj_y_) {
+          std::swap(rhs_rows, rhs_cols);
+        }
+        OP_REQUIRES(ctx, lhs_cols == rhs_rows,
                     errors::InvalidArgument(
-                        "lhs.dim(", i, ") and rhs.dim(", i,
-                        ") must be the same: ", lhs.shape().DebugString(),
-                        " vs ", rhs.shape().DebugString()));
-      }
-    } else {
-      OP_REQUIRES(
-          ctx, lhs.dims() >= 2,
-          errors::InvalidArgument("In[0] ndims must be >= 2: ", lhs.dims()));
-      OP_REQUIRES(
-          ctx, rhs.dims() >= 2,
-          errors::InvalidArgument("In[1] ndims must be >= 2: ", rhs.dims()));
-    }
+                        "lhs mismatch rhs shape: ", lhs_cols, " vs. ", rhs_rows,
+                        ": ", lhs.shape().DebugString(), " ",
+                        rhs.shape().DebugString(), " ", adj_x_, " ", adj_y_));
 
-    // lhs and rhs can have different dimensions
-    const int ndims_lhs = lhs.dims();
-    const int ndims_rhs = rhs.dims();
+        out_shape.AddDim(lhs_rows);
+        out_shape.AddDim(rhs_cols);
 
-    // Get broadcast info
-    MatMulBCast bcast(lhs.shape().dim_sizes(), rhs.shape().dim_sizes());
-    OP_REQUIRES(
-        ctx, bcast.IsValid(),
-        errors::InvalidArgument(
-            "In[0] and In[1] must have compatible batch dimensions: ",
-            lhs.shape().DebugString(), " vs. ", rhs.shape().DebugString()));
+        Tensor *out = nullptr;
+        // Implement Mempool later for Vanilla path too.
+        OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &out));
+        if (out->NumElements() == 0) {
+          return;
+        }
+        if (lhs.NumElements() == 0 || rhs.NumElements() == 0) {
+          functor::SetZeroFunctor<Device, Scalar> f;
+          f(ctx->eigen_device<Device>(), out->flat<Scalar>());
+          return;
+        }
+        Tensor out_reshaped;
+        OP_REQUIRES(ctx,
+                    out_reshaped.CopyFrom(
+                        *out, TensorShape({batch_size, lhs_rows, rhs_cols})),
+                    errors::Internal("Failed to reshape output from ",
+                                     out->shape().DebugString()));
+        LaunchBatchMatMul<Device, Scalar>::Launch(ctx, lhs_reshaped,
+                                                  rhs_reshaped, adj_x_, adj_y_,
+                                                  bcast, &out_reshaped);
 
-    TensorShape out_shape = bcast.output_batch_shape();
-    auto batch_size = bcast.output_batch_size();
-
-    auto lhs_rows = lhs.dim_size(ndims_lhs - 2);
-    auto lhs_cols = lhs.dim_size(ndims_lhs - 1);
-    auto rhs_rows = rhs.dim_size(ndims_rhs - 2);
-    auto rhs_cols = rhs.dim_size(ndims_rhs - 1);
-
-    // TF-vanilla path will override lhs_reshaped and rhs_reshaped
-    auto rhs_reshaped = rhs.template flat_inner_dims<Scalar, 3>();
-    auto lhs_reshaped = lhs.template flat_inner_dims<Scalar, 3>();
-
-    const uint64 M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
-    const uint64 K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
-    const uint64 N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
-
-    // Switch for TF-vanilla and TF-zendnn
-    // When M and N <= 64 TF-Vanilla path(Eigen implementation)
-    //  is optimal for batched GEMM execution
-    // ZenDNN kernel works well beyond above M and N values
-    int switch_vanilla = (M <= 64) && (N <= 64);
-
-    if (switch_vanilla) {
-      Tensor lhs_reshaped;
-      OP_REQUIRES(ctx,
-                  lhs_reshaped.CopyFrom(lhs, TensorShape({bcast.x_batch_size(),
-                                                          lhs_rows, lhs_cols})),
-                  errors::Internal("Failed to reshape In[0] from ",
-                                   lhs.shape().DebugString()));
-      Tensor rhs_reshaped;
-      OP_REQUIRES(ctx,
-                  rhs_reshaped.CopyFrom(rhs, TensorShape({bcast.y_batch_size(),
-                                                          rhs_rows, rhs_cols})),
-                  errors::Internal("Failed to reshape In[1] from ",
-                                   rhs.shape().DebugString()));
-      // We need to reshape lhs and rhs before swapping their
-      // rows and cols while reshapping (lhs and rhs) is not
-      // needed in case of zendnn computation path.
-      if (adj_x_) {
-        std::swap(lhs_rows, lhs_cols);
-      }
-      if (adj_y_) {
-        std::swap(rhs_rows, rhs_cols);
-      }
-      OP_REQUIRES(ctx, lhs_cols == rhs_rows,
-                  errors::InvalidArgument(
-                      "lhs mismatch rhs shape: ", lhs_cols, " vs. ", rhs_rows,
-                      ": ", lhs.shape().DebugString(), " ",
-                      rhs.shape().DebugString(), " ", adj_x_, " ", adj_y_));
-
-      out_shape.AddDim(lhs_rows);
-      out_shape.AddDim(rhs_cols);
-
-      Tensor *out = nullptr;
-      // Implement Mempool later for Vanilla path too.
-      OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &out));
-      if (out->NumElements() == 0) {
-        return;
-      }
-      if (lhs.NumElements() == 0 || rhs.NumElements() == 0) {
-        functor::SetZeroFunctor<Device, Scalar> f;
-        f(ctx->eigen_device<Device>(), out->flat<Scalar>());
-        return;
-      }
-      Tensor out_reshaped;
-      OP_REQUIRES(ctx,
-                  out_reshaped.CopyFrom(
-                      *out, TensorShape({batch_size, lhs_rows, rhs_cols})),
-                  errors::Internal("Failed to reshape output from ",
-                                   out->shape().DebugString()));
-      LaunchBatchMatMul<Device, Scalar>::Launch(ctx, lhs_reshaped, rhs_reshaped,
-                                                adj_x_, adj_y_, bcast,
-                                                &out_reshaped);
-
-      if (is_mul_add) {
-        const Tensor &mul_tensor = ctx->input(2);
-        const Tensor &add_tensor = ctx->input(3);
-        // Num of Attention Heads * SeqLength * SeqLength
-        int out_d1d2d3 = out->dim_size(1) * out->dim_size(2) * out->dim_size(3);
-        // SeqLength * SeqLength
-        int out_d2d3 = out->dim_size(2) * out->dim_size(3);
-        // Constant * SeqLength * SeqLength
-        int add_d1d2d3 = add_tensor.dim_size(1) * add_tensor.dim_size(2) *
-                         add_tensor.dim_size(3);
-        float mul_node = mul_tensor.flat<float>().data()[0];
-        const float *add_data = add_tensor.flat<float>().data();
-        float *out_data = out->flat<float>().data();
-        zendnnEnv zenEnvObj = readEnv();
-        int no_of_threads = zenEnvObj.omp_num_threads;
+        if (is_mul_add) {
+          const Tensor &mul_tensor = ctx->input(2);
+          const Tensor &add_tensor = ctx->input(3);
+          // Num of Attention Heads * SeqLength * SeqLength
+          int out_d1d2d3 =
+              out->dim_size(1) * out->dim_size(2) * out->dim_size(3);
+          // SeqLength * SeqLength
+          int out_d2d3 = out->dim_size(2) * out->dim_size(3);
+          // Constant * SeqLength * SeqLength
+          int add_d1d2d3 = add_tensor.dim_size(1) * add_tensor.dim_size(2) *
+                           add_tensor.dim_size(3);
+          float mul_node = mul_tensor.flat<float>().data()[0];
+          const float *add_data = add_tensor.flat<float>().data();
+          float *out_data = out->flat<float>().data();
+          zendnnEnv zenEnvObj = readEnv();
+          int no_of_threads = zenEnvObj.omp_num_threads;
 
 // TODO: Implement Multi-level parallelism
 // For Batch size < number of threads the current implementation
 // will not perform optimally
 #pragma omp parallel for num_threads(no_of_threads)
-        for (int i = 0; i < out->dim_size(0); i++) {
-          int bs_out_d1d2d3 = (i * out_d1d2d3);
-          int bs_add_d1d2d3 = (i * add_d1d2d3);
-          for (int j = 0; j < out->dim_size(1); j++) {
-            int heads_out_d2d3 = bs_out_d1d2d3 + (j * out_d2d3);
-            for (int k = 0; k < out->dim_size(2); k++) {
-              int seq_out_d3 = heads_out_d2d3 + (k * out->dim_size(3));
-              int seq_add_d3 = bs_add_d1d2d3 + (k * add_tensor.dim_size(3));
+          for (int i = 0; i < out->dim_size(0); i++) {
+            int bs_out_d1d2d3 = (i * out_d1d2d3);
+            int bs_add_d1d2d3 = (i * add_d1d2d3);
+            for (int j = 0; j < out->dim_size(1); j++) {
+              int heads_out_d2d3 = bs_out_d1d2d3 + (j * out_d2d3);
+              for (int k = 0; k < out->dim_size(2); k++) {
+                int seq_out_d3 = heads_out_d2d3 + (k * out->dim_size(3));
+                int seq_add_d3 = bs_add_d1d2d3 + (k * add_tensor.dim_size(3));
 #pragma omp simd
-              for (int l = 0; l < out->dim_size(3); l++) {
-                int index = seq_out_d3 + l;
-                int add_index = seq_add_d3 + l;
-                out_data[index] =
-                    (out_data[index] * mul_node) + add_data[add_index];
+                for (int l = 0; l < out->dim_size(3); l++) {
+                  int index = seq_out_d3 + l;
+                  int add_index = seq_add_d3 + l;
+                  out_data[index] =
+                      (out_data[index] * mul_node) + add_data[add_index];
+                }
               }
             }
           }
         }
-      }
-    } else {
-      if (adj_x_) {
-        std::swap(lhs_rows, lhs_cols);
-      }
-      if (adj_y_) {
-        std::swap(rhs_rows, rhs_cols);
-      }
-      OP_REQUIRES(ctx, lhs_cols == rhs_rows,
-                  errors::InvalidArgument(
-                      "lhs mismatch rhs shape: ", lhs_cols, " vs. ", rhs_rows,
-                      ": ", lhs.shape().DebugString(), " ",
-                      rhs.shape().DebugString(), " ", adj_x_, " ", adj_y_));
+      } else {
+        if (adj_x_) {
+          std::swap(lhs_rows, lhs_cols);
+        }
+        if (adj_y_) {
+          std::swap(rhs_rows, rhs_cols);
+        }
+        OP_REQUIRES(ctx, lhs_cols == rhs_rows,
+                    errors::InvalidArgument(
+                        "lhs mismatch rhs shape: ", lhs_cols, " vs. ", rhs_rows,
+                        ": ", lhs.shape().DebugString(), " ",
+                        rhs.shape().DebugString(), " ", adj_x_, " ", adj_y_));
 
-      out_shape.AddDim(lhs_rows);
-      out_shape.AddDim(rhs_cols);
-      // Update the output type
-      zenTensorType out_type = zenTensorType::FLOAT;
+        out_shape.AddDim(lhs_rows);
+        out_shape.AddDim(rhs_cols);
+        // Update the output type
+        zenTensorType out_type =
+            (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
+        zendnnEnv zenEnvObj = readEnv();
+        Tensor *out = nullptr;
+        int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
+                               (ctx->expected_output_dtype(0) == DT_FLOAT ||
+                                ctx->expected_output_dtype(0) == DT_BFLOAT16);
+        ZenMemoryPool<Scalar> *zenPoolBuffer = NULL;
+
+        // ZenMemPool Optimization reuse o/p tensors from the pool. By default
+        //  its enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory
+        //  pool optimization
+        //  Cases where tensors in pool are not free or requested size is more
+        //  than available tensor size in Pool, control will fall back to
+        //  default way of allocation i.e. with allocate_output(..)
+        if (zenEnableMemPool) {
+          unsigned int threadID = getZenTFthreadId(std::this_thread::get_id());
+          zenPoolBuffer = ZenMemoryPool<Scalar>::getZenMemPool(threadID);
+          if (zenPoolBuffer) {
+            int status = zenPoolBuffer->acquireZenPoolTensor(
+                ctx, &out, out_shape, out_links, reset, out_type);
+            if (status) {
+              zenEnableMemPool = false;
+            }
+          } else {
+            zenEnableMemPool = false;
+          }
+        }
+        if (!zenEnableMemPool) {
+          OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &out));
+        }
+
+        if (out->NumElements() == 0) {
+          return;
+        }
+        if (lhs.NumElements() == 0 || rhs.NumElements() == 0) {
+          functor::SetZeroFunctor<Device, Scalar> f;
+          f(ctx->eigen_device<Device>(), out->flat<Scalar>());
+          return;
+        }
+
+        auto out_reshaped = out->template flat_inner_dims<float, 3>();
+
+        std::vector<int> m_array(batch_size, M);
+        std::vector<int> n_array(batch_size, N);
+        std::vector<int> k_array(batch_size, K);
+        std::vector<int> lda_array(batch_size, adj_x_ ? M : K);
+        std::vector<int> ldb_array(batch_size, adj_y_ ? K : N);
+        std::vector<int> ldc_array(batch_size, N);
+        std::vector<float> alpha_array(batch_size, 1.0);
+        std::vector<float> beta_array(batch_size, 0.0);
+        std::vector<int> group_size(1, batch_size);
+        std::vector<const float *> a_array;
+        std::vector<const float *> b_array;
+        std::vector<float *> c_array;
+        std::vector<const float *> add_array;
+
+        a_array.reserve(batch_size);
+        b_array.reserve(batch_size);
+        c_array.reserve(batch_size);
+        add_array.reserve(out->dim_size(0));
+
+        if (!bcast.IsBroadcastingRequired()) {
+          for (int64 i = 0; i < batch_size; i++) {
+            a_array.push_back(&lhs_reshaped(i, 0, 0));
+            b_array.push_back(&rhs_reshaped(i, 0, 0));
+            c_array.push_back(&out_reshaped(i, 0, 0));
+          }
+        } else {
+          // Broadcasting is needed, so get the mapping from flattened output
+          // batch indices to x's and y's flattened batch indices.
+          const std::vector<int64> &a_batch_indices = bcast.x_batch_indices();
+          const std::vector<int64> &b_batch_indices = bcast.y_batch_indices();
+
+          for (int64 i = 0; i < batch_size; i++) {
+            a_array.push_back(&lhs_reshaped(a_batch_indices[i], 0, 0));
+            b_array.push_back(&rhs_reshaped(b_batch_indices[i], 0, 0));
+            c_array.push_back(&out_reshaped(i, 0, 0));
+          }
+        }
+        float mul_node = 1;
+        if (is_mul_add) {
+          const Tensor &mul_tensor = ctx->input(2);
+          const Tensor &add_tensor = ctx->input(3);
+          mul_node = mul_tensor.flat<float>().data()[0];
+          auto add_reshaped = add_tensor.template flat_inner_dims<float, 3>();
+          for (int64 i = 0; i < out->dim_size(0); i++) {
+            add_array.push_back(&add_reshaped(i, 0, 0));
+          }
+        }
+        bool cblasRowMajor = 1;
+        zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
+                       &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
+                       &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
+                       &ldc_array[0], 1, &group_size[0], is_mul_add,
+                       &add_array[0], mul_node, out->dim_size(0));
+
+        // If ZenMemPool Optimization is enabled(default), update the state of
+        //  Memory pool based on input_array address
+        if (zenEnvObj.zenEnableMemPool && zenPoolBuffer) {
+          zenPoolBuffer->zenMemPoolFree(ctx, (void *)a_array[0]);
+          zenPoolBuffer->zenMemPoolFree(ctx, (void *)b_array[0]);
+        }
+      }
+    }
+    // Batch matmul for BF16
+    else {
+      ZenExecutor *ex = ex->getInstance();
+      engine eng = ex->getEngine();
+      stream s = ex->getStream();
+      using tag = memory::format_tag;
+      using dt = memory::data_type;
+      std::vector<primitive> net;
+      std::vector<std::unordered_map<int, memory>> net_args;
+      // BF16 kernel only accepts 4D tensors
+      // since it's hardcoded as 4D and only tested with 4D tensors
+      auto input_map = lhs.tensor<Scalar, 4>();
+      const Scalar *input_array = input_map.data();
+      auto filter_map = rhs.tensor<Scalar, 4>();
+      const Scalar *filter_array = filter_map.data();
+      Scalar *in_arr = const_cast<Scalar *>(input_array);
+      Scalar *filt_arr = const_cast<Scalar *>(filter_array);
+      MatMulBCast bcast(lhs.shape().dim_sizes(), rhs.shape().dim_sizes());
+      OP_REQUIRES(
+          ctx, bcast.IsValid(),
+          errors::InvalidArgument(
+              "In[0] and In[1] must have compatible batch dimensions: ",
+              lhs.shape().DebugString(), " vs. ", rhs.shape().DebugString()));
+      auto rhs_reshaped = rhs.template flat_inner_dims<Scalar, 3>();
+      auto lhs_reshaped = lhs.template flat_inner_dims<Scalar, 3>();
+      const uint64 M = lhs_reshaped.dimension(adj_x_ ? 2 : 1);
+      const uint64 K = lhs_reshaped.dimension(adj_x_ ? 1 : 2);
+      const uint64 N = rhs_reshaped.dimension(adj_y_ ? 1 : 2);
+
+      TensorShape out_shape = bcast.output_batch_shape();
+      out_shape.AddDim(M);
+      out_shape.AddDim(N);
+      auto batch_size = bcast.output_batch_size();
+      zenTensorType out_type =
+          (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
       zendnnEnv zenEnvObj = readEnv();
-      Tensor *out = nullptr;
+      Tensor *output = nullptr;
       int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
-                             (ctx->expected_output_dtype(0) == DT_FLOAT);
-      ZenMemoryPool<float> *zenPoolBuffer = NULL;
-
-      // ZenMemPool Optimization reuse o/p tensors from the pool. By default
-      //  its enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory
-      //  pool optimization
-      //  Cases where tensors in pool are not free or requested size is more
-      //  than available tensor size in Pool, control will fall back to
-      //  default way of allocation i.e. with allocate_output(..)
+                             (ctx->expected_output_dtype(0) == DT_FLOAT ||
+                              ctx->expected_output_dtype(0) == DT_BFLOAT16);
+      ZenMemoryPool<Scalar> *zenPoolBuffer = NULL;
       if (zenEnableMemPool) {
         unsigned int threadID = getZenTFthreadId(std::this_thread::get_id());
-        zenPoolBuffer = ZenMemoryPool<float>::getZenMemPool(threadID);
+        zenPoolBuffer = ZenMemoryPool<Scalar>::getZenMemPool(threadID);
         if (zenPoolBuffer) {
           int status = zenPoolBuffer->acquireZenPoolTensor(
-              ctx, &out, out_shape, out_links, reset, out_type);
+              ctx, &output, out_shape, out_links, reset, out_type);
           if (status) {
             zenEnableMemPool = false;
           }
@@ -418,79 +555,84 @@ class ZenBatchMatMul : public OpKernel {
         }
       }
       if (!zenEnableMemPool) {
-        OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &out));
+        // Output tensor is of the following dimensions:
+        // [ in_batch, out_rows, out_cols, out_depth ]
+        OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output));
       }
+      auto output_map = output->tensor<Scalar, 4>();
+      Scalar *output_array = const_cast<Scalar *>(output_map.data());
 
-      if (out->NumElements() == 0) {
-        return;
-      }
-      if (lhs.NumElements() == 0 || rhs.NumElements() == 0) {
-        functor::SetZeroFunctor<Device, Scalar> f;
-        f(ctx->eigen_device<Device>(), out->flat<Scalar>());
-        return;
-      }
+      memory::dims src_dims = {lhs.dim_size(0), lhs.dim_size(1), M, K};
+      memory::dims weight_dims = {rhs.dim_size(0), rhs.dim_size(1), K, N};
+      memory::dims dst_dims = {lhs.dim_size(0), lhs.dim_size(1), M, N};
 
-      auto out_reshaped = out->template flat_inner_dims<Scalar, 3>();
+      memory::desc src_md = memory::desc({src_dims}, dt::bf16, tag::abcd);
+      memory::desc dst_md = memory::desc({dst_dims}, dt::bf16, tag::abcd);
+      memory::desc matmul_weights_md =
+          memory::desc({weight_dims}, dt::bf16, adj_y_ ? tag::abdc : tag::abcd);
+      zendnn::memory user_weights_memory, src_memory, dst_memory;
+      src_memory = memory({{src_dims}, dt::bf16, tag::abcd}, eng, in_arr);
+      dst_memory = memory({{dst_dims}, dt::bf16, tag::abcd}, eng, output_array);
 
-      std::vector<int> m_array(batch_size, M);
-      std::vector<int> n_array(batch_size, N);
-      std::vector<int> k_array(batch_size, K);
-      std::vector<int> lda_array(batch_size, adj_x_ ? M : K);
-      std::vector<int> ldb_array(batch_size, adj_y_ ? K : N);
-      std::vector<int> ldc_array(batch_size, N);
-      std::vector<float> alpha_array(batch_size, 1.0);
-      std::vector<float> beta_array(batch_size, 0.0);
-      std::vector<int> group_size(1, batch_size);
-      std::vector<const Scalar *> a_array;
-      std::vector<const Scalar *> b_array;
-      std::vector<Scalar *> c_array;
-      std::vector<const Scalar *> add_array;
+      user_weights_memory =
+          memory({{weight_dims}, dt::bf16, adj_y_ ? tag::abdc : tag::abcd}, eng,
+                 filt_arr);
+      primitive_attr matmul_attr;
 
-      a_array.reserve(batch_size);
-      b_array.reserve(batch_size);
-      c_array.reserve(batch_size);
-      add_array.reserve(out->dim_size(0));
-
-      if (!bcast.IsBroadcastingRequired()) {
-        for (int64 i = 0; i < batch_size; i++) {
-          a_array.push_back(&lhs_reshaped(i, 0, 0));
-          b_array.push_back(&rhs_reshaped(i, 0, 0));
-          c_array.push_back(&out_reshaped(i, 0, 0));
-        }
-      } else {
-        // Broadcasting is needed, so get the mapping from flattened output
-        // batch indices to x's and y's flattened batch indices.
-        const std::vector<int64> &a_batch_indices = bcast.x_batch_indices();
-        const std::vector<int64> &b_batch_indices = bcast.y_batch_indices();
-
-        for (int64 i = 0; i < batch_size; i++) {
-          a_array.push_back(&lhs_reshaped(a_batch_indices[i], 0, 0));
-          b_array.push_back(&rhs_reshaped(b_batch_indices[i], 0, 0));
-          c_array.push_back(&out_reshaped(i, 0, 0));
-        }
-      }
-      float mul_node = 1;
+      // Binary postop support
       if (is_mul_add) {
         const Tensor &mul_tensor = ctx->input(2);
         const Tensor &add_tensor = ctx->input(3);
-        mul_node = mul_tensor.flat<float>().data()[0];
-        auto add_reshaped = add_tensor.template flat_inner_dims<Scalar, 3>();
-        for (int64 i = 0; i < out->dim_size(0); i++) {
-          add_array.push_back(&add_reshaped(i, 0, 0));
-        }
-      }
-      bool cblasRowMajor = 1;
-      zenBatchMatMul(cblasRowMajor, adj_x_, adj_y_, &m_array[0], &n_array[0],
-                     &k_array[0], &alpha_array[0], &a_array[0], &lda_array[0],
-                     &b_array[0], &ldb_array[0], &beta_array[0], &c_array[0],
-                     &ldc_array[0], 1, &group_size[0], is_mul_add,
-                     &add_array[0], mul_node, out->dim_size(0));
+        const Scalar *mul_node = mul_tensor.flat<Scalar>().data();
+        Scalar *mul_arr = const_cast<Scalar *>(mul_node);
+        const Scalar *add_data = add_tensor.flat<Scalar>().data();
+        Scalar *add_arr = const_cast<Scalar *>(add_data);
+        memory::dims mul_dims = {1, 1, 1, 1};
+        memory::dims add_dims = {add_tensor.dim_size(0), add_tensor.dim_size(1),
+                                 add_tensor.dim_size(2),
+                                 add_tensor.dim_size(3)};
+        zendnn::post_ops post_ops;
+        post_ops.append_binary(algorithm::binary_mul,
+                               memory::desc({mul_dims}, dt::bf16, tag::abcd));
+        post_ops.append_binary(algorithm::binary_add,
+                               memory::desc({add_dims}, dt::bf16, tag::abcd));
+        matmul_attr.set_post_ops(post_ops);
+        matmul::desc matmul_pd1 =
+            matmul::desc(src_md, matmul_weights_md, dst_md);
+        matmul::primitive_desc matmul_pd =
+            matmul::primitive_desc(matmul_pd1, matmul_attr, eng);
+        net.push_back(matmul(matmul_pd));
+        zendnn::memory postop_memory1, postop_memory2;
+        postop_memory1 =
+            memory({{mul_dims}, dt::bf16, tag::abcd}, eng, mul_arr);
+        postop_memory2 =
+            memory({{add_dims}, dt::bf16, tag::abcd}, eng, add_arr);
+        net_args.push_back(
+            {{ZENDNN_ARG_SRC, src_memory},
+             {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+             {ZENDNN_ARG_DST, dst_memory},
+             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(0) | ZENDNN_ARG_SRC_1,
+              postop_memory1},
+             {ZENDNN_ARG_ATTR_MULTIPLE_POST_OP(1) | ZENDNN_ARG_SRC_1,
+              postop_memory2}});
+      } else {
+        matmul::desc matmul_pd1 =
+            matmul::desc(src_md, matmul_weights_md, dst_md);
+        matmul::primitive_desc matmul_pd =
+            matmul::primitive_desc(matmul_pd1, matmul_attr, eng);
 
-      // If ZenMemPool Optimization is enabled(default), update the state of
-      //  Memory pool based on input_array address
+        net.push_back(matmul(matmul_pd));
+        net_args.push_back({{ZENDNN_ARG_SRC, src_memory},
+                            {ZENDNN_ARG_WEIGHTS, user_weights_memory},
+                            {ZENDNN_ARG_DST, dst_memory}});
+      }
+      assert(net.size() == net_args.size() && "something is missing");
+      for (size_t i = 0; i < net.size(); ++i) {
+        net.at(i).execute(s, net_args.at(i));
+      }
       if (zenEnvObj.zenEnableMemPool && zenPoolBuffer) {
-        zenPoolBuffer->zenMemPoolFree(ctx, (void *)a_array[0]);
-        zenPoolBuffer->zenMemPoolFree(ctx, (void *)b_array[0]);
+        zenPoolBuffer->zenMemPoolFree(ctx, (void *)input_array);
+        zenPoolBuffer->zenMemPoolFree(ctx, (void *)filter_array);
       }
     }
   }
@@ -502,24 +644,20 @@ class ZenBatchMatMul : public OpKernel {
   int in_links, out_links;
 };
 
-#define REGISTER_BATCH_MATMUL_ZEN(TYPE)                                    \
-  REGISTER_KERNEL_BUILDER(                                                 \
-      Name("_ZenBatchMatMul").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
-      ZenBatchMatMul<CPUDevice, TYPE, false, false>);
-
-#define REGISTER_BATCH_MATMUL_ZEN_V2(TYPE)                                   \
-  REGISTER_KERNEL_BUILDER(                                                   \
+#define REGISTER_BATCH_MATMUL_ZEN(TYPE)                                       \
+  REGISTER_KERNEL_BUILDER(                                                    \
+      Name("_ZenBatchMatMul").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"),   \
+      ZenBatchMatMul<CPUDevice, TYPE, false, false>);                         \
+  REGISTER_KERNEL_BUILDER(                                                    \
       Name("_ZenBatchMatMulV2").Device(DEVICE_CPU).TypeConstraint<TYPE>("T"), \
-      ZenBatchMatMul<CPUDevice, TYPE, true, false>);
-
-#define REGISTER_FUSED_BATCH_MATMUL_ZEN_V2(TYPE)          \
-  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchMatMulV2")  \
-                              .Device(DEVICE_CPU)         \
-                              .TypeConstraint<TYPE>("T"), \
+      ZenBatchMatMul<CPUDevice, TYPE, true, false>);                          \
+  REGISTER_KERNEL_BUILDER(Name("_ZenFusedBatchMatMulV2")                      \
+                              .Device(DEVICE_CPU)                             \
+                              .TypeConstraint<TYPE>("T"),                     \
                           ZenBatchMatMul<CPUDevice, TYPE, true, true>);
 
 TF_CALL_float(REGISTER_BATCH_MATMUL_ZEN)
-    TF_CALL_float(REGISTER_BATCH_MATMUL_ZEN_V2)
-        TF_CALL_float(REGISTER_FUSED_BATCH_MATMUL_ZEN_V2)
+TF_CALL_bfloat16(REGISTER_BATCH_MATMUL_ZEN)
+#undef REGISTER_BATCH_MATMUL_ZEN
 
 }  // end namespace tensorflow

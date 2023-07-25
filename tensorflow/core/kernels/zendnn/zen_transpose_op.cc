@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -73,12 +73,15 @@ class ZenInvertPermutationOp : public OpKernel {
                                         "must have <= int32 max elements"));
     const T N = static_cast<T>(Tin.size());  // Safe: bounds-checked above.
     // Update the output type
-    zenTensorType out_type = zenTensorType::FLOAT;
+    bool is_float = std::is_same<T, float>::value;
+    zenTensorType out_type =
+        (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
 
     zendnnEnv zenEnvObj = readEnv();
     Tensor *output = nullptr;
     int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
-                           context->expected_output_dtype(0) == DT_FLOAT;
+                           (context->expected_output_dtype(0) == DT_FLOAT ||
+                            context->expected_output_dtype(0) == DT_BFLOAT16);
     ZenMemoryPool<T> *zenPoolBuffer = NULL;
 
     // ZenMemPool Optimization reuse o/p tensors from the pool. By default
@@ -166,8 +169,8 @@ Status PermutationHelper(const Tensor &perm, const int dims,
 // REQUIRES: perm is a vector of int32.
 // REQUIRES: input.dims() == perm.size().
 // REQUIRES: perm is a permutation.
-
-void ZenTransposeOp::Compute(OpKernelContext *ctx) {
+template <typename T>
+void ZenTransposeOp<T>::Compute(OpKernelContext *ctx) {
   zendnnInfo(ZENDNN_FWKLOG,
              "ZEN-OP-DEF: ZenTransposeOp (TF kernel): In Compute!");
 
@@ -222,14 +225,15 @@ void ZenTransposeOp::Compute(OpKernelContext *ctx) {
     ctx->set_output(0, output);
     return;
   }
-  zenTensorType out_type = zenTensorType::FLOAT;
-
+  bool is_float = std::is_same<T, float>::value;
+  zenTensorType out_type =
+      (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
   zendnnEnv zenEnvObj = readEnv();
   Tensor *output = nullptr;
-  int zenEnableMemPool =
-      zenEnvObj.zenEnableMemPool && ctx->expected_output_dtype(0) == DT_FLOAT;
-  ZenMemoryPool<float> *zenPoolBuffer = NULL;
-
+  int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
+                         (ctx->expected_output_dtype(0) == DT_FLOAT ||
+                          ctx->expected_output_dtype(0) == DT_BFLOAT16);
+  ZenMemoryPool<T> *zenPoolBuffer = NULL;
   // ZenMemPool Optimization reuse o/p tensors from the pool. By default
   //  its enabled, export ZENDNN_ENABLE_MEMPOOL=0 will disable memory
   //  pool optimization
@@ -238,7 +242,7 @@ void ZenTransposeOp::Compute(OpKernelContext *ctx) {
   //  default way of allocation i.e. with allocate_output(..)
   if (zenEnableMemPool) {
     unsigned int threadID = getZenTFthreadId(std::this_thread::get_id());
-    zenPoolBuffer = ZenMemoryPool<float>::getZenMemPool(threadID);
+    zenPoolBuffer = ZenMemoryPool<T>::getZenMemPool(threadID);
     if (zenPoolBuffer) {
       int status = zenPoolBuffer->acquireZenPoolTensor(
           ctx, &output, shape, out_links, reset, out_type);
@@ -260,40 +264,39 @@ void ZenTransposeOp::Compute(OpKernelContext *ctx) {
   // If ZenMemPool Optimization is enabled(default), update the state of
   //  Memory pool based on input_array address
   if (zenEnvObj.zenEnableMemPool && zenPoolBuffer) {
-    float *input_array =
-        const_cast<float *>(input.template flat<float>().data());
+    T *input_array = const_cast<T *>(input.template flat<T>().data());
     zenPoolBuffer->zenMemPoolFree(ctx, (void *)input_array);
   }
 }
-
-Status ZenTransposeCpuOp::DoTranspose(OpKernelContext *ctx, const Tensor &in,
-                                      gtl::ArraySlice<int32> perm,
-                                      Tensor *out) {
+template <typename T>
+Status ZenTransposeCpuOp<T>::DoTranspose(OpKernelContext *ctx, const Tensor &in,
+                                         gtl::ArraySlice<int32> perm,
+                                         Tensor *out) {
   typedef Eigen::ThreadPoolDevice CPUDevice;
   return ::tensorflow::DoTranspose(ctx->eigen_device<CPUDevice>(), in, perm,
                                    out);
 }
-
-Status ConjugateZenTransposeCpuOp::DoTranspose(OpKernelContext *ctx,
-                                               const Tensor &in,
-                                               gtl::ArraySlice<int32> perm,
-                                               Tensor *out) {
+template <typename T>
+Status ConjugateZenTransposeCpuOp<T>::DoTranspose(OpKernelContext *ctx,
+                                                  const Tensor &in,
+                                                  gtl::ArraySlice<int32> perm,
+                                                  Tensor *out) {
   typedef Eigen::ThreadPoolDevice CPUDevice;
   return ::tensorflow::DoConjugateTranspose(ctx->eigen_device<CPUDevice>(), in,
                                             perm, out);
 }
 
-#define REGISTER(T)                                     \
+#define REGISTER(T)                                      \
   REGISTER_KERNEL_BUILDER(Name("_ZenTranspose")          \
-                              .Device(DEVICE_CPU)       \
-                              .TypeConstraint<T>("T")   \
-                              .HostMemory("perm"),      \
-                          ZenTransposeCpuOp);           \
+                              .Device(DEVICE_CPU)        \
+                              .TypeConstraint<T>("T")    \
+                              .HostMemory("perm"),       \
+                          ZenTransposeCpuOp<T>);         \
   REGISTER_KERNEL_BUILDER(Name("_ZenConjugateTranspose") \
-                              .Device(DEVICE_CPU)       \
-                              .TypeConstraint<T>("T")   \
-                              .HostMemory("perm"),      \
-                          ConjugateZenTransposeCpuOp);
+                              .Device(DEVICE_CPU)        \
+                              .TypeConstraint<T>("T")    \
+                              .HostMemory("perm"),       \
+                          ConjugateZenTransposeCpuOp<T>);
 
 TF_CALL_ALL_TYPES(REGISTER)
 #undef REGISTER

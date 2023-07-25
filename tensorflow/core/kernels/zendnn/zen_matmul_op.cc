@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -69,12 +69,14 @@ class ZenMatMulOp : public OpKernel {
     TensorShape out_shape(
         {a.dim_size(a_dim_remaining), b.dim_size(b_dim_remaining)});
     // Update the output type
-    zenTensorType out_type = zenTensorType::FLOAT;
-
+    bool is_float = std::is_same<T, float>::value;
+    zenTensorType out_type =
+        (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
     zendnnEnv zenEnvObj = readEnv();
     Tensor *out = nullptr;
-    int zenEnableMemPool =
-        zenEnvObj.zenEnableMemPool && ctx->expected_output_dtype(0) == DT_FLOAT;
+    int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
+                           (ctx->expected_output_dtype(0) == DT_FLOAT ||
+                            ctx->expected_output_dtype(0) == DT_BFLOAT16);
     ZenMemoryPool<T> *zenPoolBuffer = NULL;
 
     // ZenMemPool Optimization reuse o/p tensors from the pool. By default
@@ -121,8 +123,8 @@ class ZenMatMulOp : public OpKernel {
     bool transpose_a = dim_pair[0].first == 0;
     bool transpose_b = dim_pair[0].second == 1;
 
-    auto a_ptr = const_cast<float *>(a.template flat<T>().data());
-    auto b_ptr = const_cast<float *>(b.template flat<T>().data());
+    auto a_ptr = const_cast<T *>(a.template flat<T>().data());
+    auto b_ptr = const_cast<T *>(b.template flat<T>().data());
     auto c_ptr = (out->template flat<T>().data());
 
     // dimensions of matmul source, weights, bias and destination tensors
@@ -142,13 +144,13 @@ class ZenMatMulOp : public OpKernel {
 
     if (isBiasAddGelu) {
       const Tensor &bias = ctx->input(2);
-      auto bias_ptr = const_cast<float *>(bias.template flat<T>().data());
+      auto bias_ptr = const_cast<T *>(bias.template flat<T>().data());
       ZenMatMulParams matmul_params(src_dims, weight_dims, bias_dims, dst_dims,
-                                    src_format, weight_format);
+                                    src_format, weight_format, isBiasAddGelu);
       matmul_params.post_op_params.push_back({"gelu", {1.0, 0.0, 0.0}});
       ZenMatMulPrimitive<T, T, T, T> *matmul_prim =
           ZenMatMulPrimitiveFactory<T, T, T, T>::Get(matmul_params, 1);
-      matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr);
+      matmul_prim->Execute(a_ptr, b_ptr, bias_ptr, c_ptr, isBiasAddGelu);
     } else {
       matmul_prim->Execute(a_ptr, b_ptr, NULL, c_ptr);
     }
@@ -168,16 +170,19 @@ class ZenMatMulOp : public OpKernel {
   bool reset;
 };
 
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenMatMul").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<float, false>);
+#define REGISTER_MATMUL(T)                                                     \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("_ZenMatMul").Device(DEVICE_CPU).TypeConstraint<T>("T"),            \
+      ZenMatMulOp<T, false>);                                                  \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("_ZenMatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      ZenMatMulOp<T, true>);                                                   \
+  REGISTER_KERNEL_BUILDER(                                                     \
+      Name("MatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<T>("T"),     \
+      ZenMatMulOp<T, true>);
 
-REGISTER_KERNEL_BUILDER(
-    Name("_ZenMatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<float, true>);
-
-REGISTER_KERNEL_BUILDER(
-    Name("MatMulBiasAddGelu").Device(DEVICE_CPU).TypeConstraint<float>("T"),
-    ZenMatMulOp<float, true>);
+TF_CALL_float(REGISTER_MATMUL) 
+TF_CALL_bfloat16(REGISTER_MATMUL)
+#undef REGISTER_MATMUL
 
 }  // namespace tensorflow

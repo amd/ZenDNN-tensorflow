@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -78,7 +78,9 @@ class ZenSoftmaxOp : public OpKernel {
       src_dims[d] = input.shape().dim_size(d);
     }
     // Update the output type
-    zenTensorType out_type = zenTensorType::FLOAT;
+    bool is_float = std::is_same<T, float>::value;
+    zenTensorType out_type =
+        (is_float) ? zenTensorType::FLOAT : zenTensorType::BFLOAT16;
 
     // Allocating memory for output tensor
     // Output tensor shape is same as input
@@ -86,8 +88,9 @@ class ZenSoftmaxOp : public OpKernel {
 
     zendnnEnv zenEnvObj = readEnv();
     Tensor *output = nullptr;
-    int zenEnableMemPool =
-        zenEnvObj.zenEnableMemPool && ctx->expected_output_dtype(0) == DT_FLOAT;
+    int zenEnableMemPool = zenEnvObj.zenEnableMemPool &&
+                           (ctx->expected_output_dtype(0) == DT_FLOAT ||
+                            ctx->expected_output_dtype(0) == DT_BFLOAT16);
     ZenMemoryPool<T> *zenPoolBuffer = NULL;
 
     // ZenMemPool Optimization reuse o/p tensors from the pool. By default
@@ -153,13 +156,14 @@ class ZenSoftmaxOp : public OpKernel {
     // Create softmax memory for src, dst,
     using tag = memory::format_tag;
     using dt = memory::data_type;
+    auto dtype = is_float ? dt::f32 : dt::bf16;
     zendnn::memory src_memory =
-        memory({{src_dims}, dt::f32, layout_type}, eng, input_array);
+        memory({{src_dims}, dtype, layout_type}, eng, input_array);
     zendnn::memory dst_memory =
-        memory({{output_dims}, dt::f32, layout_type}, eng, output_array);
+        memory({{output_dims}, dtype, layout_type}, eng, output_array);
 
     // Create memory descriptor for src
-    memory::desc src_md = memory::desc({src_dims}, dt::f32, layout_type);
+    memory::desc src_md = memory::desc({src_dims}, dtype, layout_type);
 
     // Create forward and primitive descriptor for softmax op
     softmax_forward::desc softmax_fwd_desc =
@@ -192,5 +196,8 @@ class ZenSoftmaxOp : public OpKernel {
 REGISTER_KERNEL_BUILDER(
     Name("_ZenSoftmax").Device(DEVICE_CPU).TypeConstraint<float>("T"),
     ZenSoftmaxOp<float>);
+REGISTER_KERNEL_BUILDER(
+    Name("_ZenSoftmax").Device(DEVICE_CPU).TypeConstraint<bfloat16>("T"),
+    ZenSoftmaxOp<bfloat16>);
 
 }  // namespace tensorflow

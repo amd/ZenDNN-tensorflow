@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights
+ * Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All rights
  * reserved. Notified per clause 4(b) of the license.
  *******************************************************************************/
 
@@ -408,7 +408,7 @@ REGISTER_OP("_ZenSoftmax")
     .Input("logits: T")
     .Output("softmax: T")
     .Attr("data_format: {'N', 'NC', 'TNC', 'NHWC'} = 'NHWC'")
-    .Attr("T: {float, double} = DT_FLOAT")
+    .Attr("T: {float, double, bfloat16} = DT_FLOAT")
     .Attr("reorder_before: bool")
     .Attr("reorder_after: bool")
     .Attr("in_links: int")
@@ -482,7 +482,7 @@ REGISTER_OP("_ZenFusedMatMul")
     .Output("product: T")
     .Attr("transpose_a: bool = false")
     .Attr("transpose_b: bool = false")
-    .Attr("T: {float}")
+    .Attr("T: {float, bfloat16}")
     .Attr("num_args: int >= 0")
     .Attr("fused_ops: list(string) = []")
     // Attributes for the FusedBatchNorm ----------- //
@@ -1579,7 +1579,7 @@ REGISTER_OP("_ZenVitisAIConcatV2")
     .Attr("reset: bool")
     .SetShapeFn(shape_inference::ConcatV2Shape);
 
-  REGISTER_OP("_ZenVitisAIResize")
+REGISTER_OP("_ZenVitisAIResize")
     .Input("images: T")
     .Input("multiplier: int32")
     .Output("resized_images: T")
