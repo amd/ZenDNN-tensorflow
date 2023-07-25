@@ -68,12 +68,16 @@ tf_zendnn_kernel_library(
         "zen_matmul_op.cc",
         "zen_batch_matmul_op.cc",
         "zen_matmul_op_fused.cc",
+        "zen_quantized_matmul_op.cc",
         ],
     hdrs = [
             "zen_matmul_ops_util.h",
+            "zen_quantized_ops.h",
             ],
     deps = MATH_DEPS + [
         "//tensorflow/core/kernels:fused_eigen_output_kernels",
+        "//tensorflow/core/kernels:ops_util",
+        "//tensorflow/core/kernels:no_op",
     ] + zendnn_deps(),
 )
 
@@ -214,3 +218,14 @@ tf_zendnn_kernel_library(
            ] + zendnn_deps(),
 )
 
+tf_zendnn_kernel_library(
+    name = "zen_quantization_op",
+    srcs = ["zen_quant_op.cc"],
+    hdrs = [ "zen_quantized_ops.h",
+    ],
+    deps = MATH_DEPS + [
+        "//tensorflow/core/kernels:no_op",
+        "//tensorflow/core/kernels:fused_eigen_output_kernels",
+        "//tensorflow/core/kernels:ops_util",
+           ] + zendnn_deps(),
+)

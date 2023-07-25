@@ -644,6 +644,7 @@ cc_library(
         "//tensorflow/core/kernels/zendnn:zen_softmax_op",
         "//tensorflow/core/kernels/zendnn:zen_fused_batch_norm_op",
         "//tensorflow/core/kernels/zendnn:zen_image_ops",
+        "//tensorflow/core/kernels/zendnn:zen_quantization_op",
     ]) + if_mkl([
         "//tensorflow/core/kernels/mkl:mkl_aggregate_ops",
         "//tensorflow/core/kernels/mkl:mkl_concat_op",

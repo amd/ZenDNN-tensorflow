@@ -230,6 +230,17 @@ class ZenLayoutRewritePass : public GraphOptimizationPass {
         {"VitisAIResize", "_ZenVitisAIResize", RewriteValid, UpdateZenOpAttrs});
     zen_rewrite_db_.push_back(
         {"VitisAIAddV2", "_ZenVitisAIAddV2", RewriteValid, UpdateZenOpAttrs});
+    // Converison of VitisAIMatmul op
+    zen_rewrite_db_.push_back({"VitisAIMatMul", "_ZenVitisAIMatMul",
+                               CheckValidityVitisAIWithoutBiasSupported,
+                               UpdateZenOpAttrs});
+    // Conversion of VitiAIQuantize and VitisAIDeQuantize ops
+    zen_rewrite_db_.push_back({"VitisAIQuantize", "_ZenVitisAIQuantize",
+                               CheckValidityVitisAIQuantizeorDeQuantize,
+                               UpdateZenOpAttrs});
+    zen_rewrite_db_.push_back({"VitisAIDequantize", "_ZenVitisAIDequantize",
+                               CheckValidityVitisAIQuantizeorDeQuantize,
+                               UpdateZenOpAttrs});
 
     // Quantization Specific Functions
     if (zendnn_getenv_int("ZENDNN_INT8_SUPPORT", 0) == 1) {
@@ -463,6 +474,15 @@ class ZenLayoutRewritePass : public GraphOptimizationPass {
     if ((data_type == DT_FLOAT) || (data_type == DT_BFLOAT16)) {
       return true;
     }
+  }
+
+  // Currently assuming that VitisAIQuantize and VitisAIDeQuantize ops take
+  // single input.
+  static bool CheckValidityVitisAIQuantizeorDeQuantize(const Node *n) {
+    if (n->in_edges().size() == 1) {
+      return true;
+    }
+    return false;
   }
 
   static bool CheckValidityVitisAIWithoutBiasSupported(const Node *n) {
