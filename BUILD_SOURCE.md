@@ -7,7 +7,7 @@ To build TensorFlow with ZenDNN follow below steps.
 ### Setup for Linux
 Create and activate a conda environment and install the following dependencies
 ```
-$ pip install --upgrade --no-deps --force-reinstall --no-cache-dir 'numpy<1.19.0' absl-py
+$ pip install --upgrade --no-deps --force-reinstall --no-cache-dir numpy absl-py
 $ pip install -U pip six wheel setuptools mock future scons requests packaging
 $ pip install -U keras_applications --no-deps
 $ pip install -U keras_preprocessing --no-deps
@@ -29,7 +29,7 @@ $ git clone https://github.com/amd/ZenDNN-tensorflow.git
 $ cd  ZenDNN-tensorflow
 ```
 
-The repo defaults to the master development branch which doesnt has ZenDNN support. You need to check out a release branch to build, e.g. `r2.10_zendnn_rel` or `r2.12_zendnn_rel` etc.
+The repo defaults to the master development branch which doesn't have ZenDNN support. You need to check out a release branch to build, e.g. `r2.10_zendnn_rel` or `r2.12_zendnn_rel` etc.
 ```
 $ git checkout branch_name  # r2.10_zendnn_rel, r2.12_zendnn_rel, etc.
 ```
