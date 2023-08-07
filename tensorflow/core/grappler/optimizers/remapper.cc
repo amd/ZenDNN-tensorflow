@@ -1200,6 +1200,7 @@ bool FindConv2DSwish(RemapperContext* ctx, int node_index,
                      std::set<int>* remove_node_indices) {
   using utils::MatchingDirection;
   using utils::NodeStatus;
+  if (IsZenDnnEnabled()) return false;
   // clang-format off
 
   //    Fuse Conv2D + BiasAdd/FusedBatchNorm + Sigmoid + Mul to _FuesdConv2D
