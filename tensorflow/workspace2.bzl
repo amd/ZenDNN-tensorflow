@@ -191,11 +191,11 @@ def _tf_repositories():
     tf_http_archive(
         name = "amd_blis",
         build_file = "//third_party/amd_blis:blis.BUILD",
-        sha256 = "cddd31176834a932753ac0fc4c76332868feab3e9ac607fa197d8b44c1e74a41",
-        strip_prefix = "blis-4.0",
+        sha256 = "a05c6c7d359232580d1d599696053ad0beeedf50f3b88d5d22ee7d34375ab577",
+        strip_prefix = "blis-4.1",
         urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/blis/archive/refs/tags/4.0.tar.gz",
-            "https://github.com/amd/blis/archive/refs/tags/4.0.tar.gz",
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/blis/archive/refs/tags/4.1.tar.gz",
+            "https://github.com/amd/blis/archive/refs/tags/4.1.tar.gz",
         ],
     )
 
