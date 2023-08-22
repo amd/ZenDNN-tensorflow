@@ -538,19 +538,22 @@ class ZenVitisAIConv2DOp : public OpKernel {
     bool is_input_s8 = std::is_same<Tinput, qint8>::value;
     bool is_input_u8 = std::is_same<Tinput, quint8>::value;
     bool is_output_qint8 = std::is_same<Toutput, qint8>::value;
-    memory::desc filter_memory_desc;
+    // memory::desc filter_memory_desc;
 
     // Define memory desc for creating primitives
     memory::desc src_memory_desc = memory::desc(
         {src_dims}, DataTypetoZenForInput<Tinput, Toutput>(), tag::nhwc);
-    if (dimensions.filter_rows == 1 && dimensions.stride_rows == 1 &&
-        pad_zero && is_output_qint8) {
-      filter_memory_desc =
-          memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::hwcn);
-    } else {
-      filter_memory_desc =
-          memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::any);
-    }
+    memory::desc filter_memory_desc =
+            memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::any);
+    // TODO: Add LPGEMM check and enable this conditional filter tag selection
+    // if (dimensions.filter_rows == 1 && dimensions.stride_rows == 1 &&
+    //     pad_zero && is_output_qint8) {
+    //   filter_memory_desc =
+    //       memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::hwcn);
+    // } else {
+    //   filter_memory_desc =
+    //       memory::desc({filter_dims}, DataTypetoZen<Tfilter>(), tag::any);
+    // }
     memory::desc dst_memory_desc = memory::desc(
         {dst_dims}, DataTypetoZenForOutput<Toutput, Tsum>(), tag::nhwc);
 
