@@ -1451,7 +1451,6 @@ genrule(
 
 # The interface library (tensorflow.dll.if.lib) for linking tensorflow DLL library (tensorflow.dll) on Windows.
 # To learn more about import library (called interface library in Bazel):
-#     https://docs.microsoft.com/en-us/cpp/build/linking-an-executable-to-a-dll?view=vs-2017#linking-implicitly
 filegroup(
     name = "get_tensorflow_dll_import_lib",
     srcs = ["//tensorflow:tensorflow.dll"],
@@ -1473,7 +1472,6 @@ genrule(
 
 # The interface library (tensorflow_cc.dll.if.lib) for linking tensorflow DLL library (tensorflow_cc.dll) on Windows.
 # To learn more about import library (called interface library in Bazel):
-#     https://docs.microsoft.com/en-us/cpp/build/linking-an-executable-to-a-dll?view=vs-2017#linking-implicitly
 filegroup(
     name = "get_tensorflow_cc_dll_import_lib",
     srcs = ["//tensorflow:tensorflow_cc.dll"],

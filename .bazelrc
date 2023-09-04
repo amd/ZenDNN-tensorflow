@@ -334,7 +334,6 @@ build:linux --copt="-Wswitch"
 build:linux --copt="-Wno-error=unused-but-set-variable"
 
 # On Windows, `__cplusplus` is wrongly defined without this switch
-# See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
 build:windows --copt=/Zc:__cplusplus
 build:windows --host_copt=/Zc:__cplusplus
 
@@ -388,7 +387,6 @@ build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
 
 # MSVC (Windows): Standards-conformant preprocessor mode
-# See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
 build:windows --copt=/Zc:preprocessor
 build:windows --host_copt=/Zc:preprocessor
 
