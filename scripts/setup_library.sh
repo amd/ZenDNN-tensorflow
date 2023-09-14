@@ -15,12 +15,13 @@ rm -rf aocl-libm-ose/ blis-4.1/ 4.1.tar.gz
 cd host_zendnn
 zip_sum_libm=$(sha256sum aocl-libm3.1.zip | awk '{print $1}')
 tar_sum_blis=$(sha256sum blisv4.1.tar.gz | awk '{print $1}')
-nohup python3 -m http.server 8071 --bind 127.0.0.11 &>/dev/null &
+nohup python3 -m http.server 8080 --bind 127.0.0.11 &>/dev/null &
 host_pid=$!
 #Copy LIBM tar sum and Path into tensorflow
 sed -i "s/906391b8e35d95ff37f7bda7bbef3864609b58213e52aacf687a91bebcd617c0/$zip_sum_libm/" $TF_GIT_ROOT/tensorflow/workspace2.bzl
 sed -i "s/aocl-libm-ose-aocl-3.1/aocl-libm-ose/" $TF_GIT_ROOT/tensorflow/workspace2.bzl
-sed -i "s#https://github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip#http://127.0.0.11:8071/aocl-libm3.1.zip#" $TF_GIT_ROOT/tensorflow/workspace2.bzl
+sed -i "s#https://github.com/amd/aocl-libm-ose/archive/refs/heads/aocl-3.1.zip#http://127.0.0.11:8080/aocl-libm3.1.zip#" $TF_GIT_ROOT/tensorflow/workspace2.bzl
 #Copy BLIS tar sum and Path into tensorflow
 sed -i "s/a05c6c7d359232580d1d599696053ad0beeedf50f3b88d5d22ee7d34375ab577/$tar_sum_blis/" $TF_GIT_ROOT/tensorflow/workspace2.bzl
-sed -i "s#https://github.com/amd/blis/archive/refs/tags/4.1.tar.gz#http://127.0.0.11:8071/blisv4.1.tar.gz#" $TF_GIT_ROOT/tensorflow/workspace2.bzl
+sed -i "s#https://github.com/amd/blis/archive/refs/tags/4.1.tar.gz#http://127.0.0.11:8080/blisv4.1.tar.gz#" $TF_GIT_ROOT/tensorflow/workspace2.bzl
+cd $TF_GIT_ROOT

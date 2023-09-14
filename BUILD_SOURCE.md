@@ -42,12 +42,18 @@ $ source scripts/zendnn_TF_env_setup.sh
 ```
 
 ### Only for TF2.12 Branch, Run the following script
-bash setup_library.sh
+bash scripts/setup_library.sh
 
 
 ### Export LD_LIBRARY_PATH
 ```
 $ export LD_LIBRARY_PATH=bazel-out/k8-opt/bin/_solib_k8/_U_S_Sthird_Uparty_Szen_Udnn_Czen_Ulibs_Ulinux___Uexternal_Sllvm_Uopenmp/:bazel-out/k8-opt/bin/_solib_k8/_U_S_Sthird_Uparty_Szen_Udnn_Czen_Ulibs_Ulinux___Uexternal_Samd_Ublis/:bazel-out/k8-opt/bin/_solib_k8/_U@zen_Udnn_S_S_Czen_Udnn___Uexternal_Samd_Ulibm:$LD_LIBRARY_PATH
+```
+
+### Clean the bazel
+```
+$ bazel clean --expunge
+$ bazel shutdown
 ```
 
 ### Configure the build
@@ -98,7 +104,6 @@ Preconfigured Bazel build configs to DISABLE default on features:
 
 ### Build and install the pip package
 ```
-$ bazel clean --expunge
 $ bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=1" --config=zendnn --copt="-O3" -c opt --copt=-march='znver2'  //tensorflow/tools/pip_package:build_pip_package &> build_logs.txt
 $ ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
 $ python -m pip install --force-reinstall --no-cache-dir /tmp/tensorflow_pkg/<your .whl file>

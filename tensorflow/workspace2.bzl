@@ -202,11 +202,11 @@ def _tf_repositories():
     tf_http_archive(
         name = "zen_dnn",
         build_file = "//third_party/zen_dnn:zendnn.BUILD",
-        sha256 = "006024118968a9d8f3de4647f3cb25c6bd5879563ebf9672afe2efd1ae4bc458",
-        strip_prefix = "ZenDNN-4.0",
+        sha256 = "b5696f20416da4164e02a1f158d47782611a575b0a1251d5826e65ac2b23872f",
+        strip_prefix = "ZenDNN-4.1",
         urls = [
-            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz",
-            "https://github.com/amd/ZenDNN/archive/refs/tags/v4.0.tar.gz",
+            "https://storage.googleapis.com/mirror.tensorflow.org/github.com/amd/ZenDNN/archive/refs/tags/v4.1.tar.gz",
+            "https://github.com/amd/ZenDNN/archive/refs/tags/v4.1.tar.gz",
         ],
     )
 
